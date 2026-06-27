@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
-import { Wallet } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { FinancesView } from "@/features/finances/components/finances-view";
+import {
+  getAccountsWithBalance,
+  getCategories,
+  getTransactions,
+} from "@/features/finances/queries";
 
 export const metadata: Metadata = { title: "Finances" };
 
-export default function FinancesPage() {
+export default async function FinancesPage() {
+  const [accounts, transactions, categories] = await Promise.all([
+    getAccountsWithBalance(),
+    getTransactions(),
+    getCategories(),
+  ]);
+
   return (
-    <>
-      <PageHeader title="Finances" description="Income, expenses, categories, balances, analytics." />
-      <EmptyState
-        icon={Wallet}
-        title="Finances arrive in Phase 5"
-        description="Accounts in KZT and USD, with per-currency totals."
-      />
-    </>
+    <FinancesView
+      accounts={accounts}
+      transactions={transactions}
+      categories={categories}
+    />
   );
 }
