@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
-import { CreditCard } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { TransactionType } from "@prisma/client";
+import { SubscriptionsView } from "@/features/subscriptions/components/subscriptions-view";
+import { getSubscriptions } from "@/features/subscriptions/queries";
+import { getCategories } from "@/features/finances/queries";
 
 export const metadata: Metadata = { title: "Subscriptions" };
 
-export default function SubscriptionsPage() {
+export default async function SubscriptionsPage() {
+  const [subscriptions, categories] = await Promise.all([
+    getSubscriptions(),
+    getCategories(),
+  ]);
+
   return (
-    <>
-      <PageHeader title="Subscriptions" description="What, how much, when the next payment is due." />
-      <EmptyState
-        icon={CreditCard}
-        title="Subscriptions arrive in Phase 5"
-        description="With Dashboard reminders for upcoming payments."
-      />
-    </>
+    <SubscriptionsView
+      subscriptions={subscriptions}
+      categories={categories
+        .filter((c) => c.type === TransactionType.EXPENSE)
+        .map((c) => c.name)}
+    />
   );
 }
