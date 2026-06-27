@@ -1,19 +1,10 @@
 import type { Metadata } from "next";
-import { FolderKanban } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { ProjectList } from "@/features/projects/components/project-list";
+import { getProjects } from "@/features/projects/queries";
 
 export const metadata: Metadata = { title: "Projects" };
 
-export default function ProjectsPage() {
-  return (
-    <>
-      <PageHeader title="Projects" description="Projects with tasks, status and notes." />
-      <EmptyState
-        icon={FolderKanban}
-        title="Projects arrive in Phase 2"
-        description="Tightly linked with Tasks — they form the core together."
-      />
-    </>
-  );
+export default async function ProjectsPage() {
+  const projects = await getProjects();
+  return <ProjectList projects={projects} />;
 }

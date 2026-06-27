@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
-import { CheckSquare } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { TasksView } from "@/features/tasks/components/tasks-view";
+import { getTasks, getProjectsForPicker } from "@/features/tasks/queries";
 
 export const metadata: Metadata = { title: "Tasks" };
 
-export default function TasksPage() {
+export default async function TasksPage() {
+  const [tasks, projects] = await Promise.all([
+    getTasks(),
+    getProjectsForPicker(),
+  ]);
+
   return (
     <>
-      <PageHeader title="Tasks" description="Statuses, priorities, deadlines, project links." />
-      <EmptyState
-        icon={CheckSquare}
-        title="Tasks arrive in Phase 2"
-        description="The task tracker is the core module — built alongside Projects."
+      <PageHeader
+        title="Tasks"
+        description="Статусы, приоритеты, сроки и привязка к проектам."
       />
+      <TasksView initialTasks={tasks} projects={projects} />
     </>
   );
 }
