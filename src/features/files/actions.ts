@@ -15,6 +15,23 @@ type ActionResult = { ok: true } | { error: string };
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB
 
+// Content types that browsers render inline and can execute script. We store
+// them as octet-stream so opening a file's signed URL downloads it instead of
+// running it (defense against stored XSS via a crafted upload).
+const INLINE_UNSAFE = new Set([
+  "text/html",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "application/xml",
+  "text/xml",
+]);
+
+function safeContentType(type: string): string {
+  const base = (type || "").split(";")[0].trim().toLowerCase();
+  if (!base || INLINE_UNSAFE.has(base)) return "application/octet-stream";
+  return base;
+}
+
 // ── Folders ───────────────────────────────────────────────────────────────
 export async function createFolder(
   name: string,
@@ -97,9 +114,10 @@ export async function uploadFile(formData: FormData): Promise<ActionResult> {
   const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(0, 200);
   const key = `${folderId ?? "root"}/${randomUUID()}-${safeName}`;
   const buffer = new Uint8Array(await file.arrayBuffer());
+  const contentType = safeContentType(file.type);
 
   try {
-    await getStorage().upload(key, buffer, file.type || "application/octet-stream");
+    await getStorage().upload(key, buffer, contentType);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Загрузка не удалась" };
   }
@@ -108,7 +126,7 @@ export async function uploadFile(formData: FormData): Promise<ActionResult> {
     data: {
       name: file.name.slice(0, 200),
       storageKey: key,
-      mimeType: file.type || "application/octet-stream",
+      mimeType: contentType,
       size: file.size,
       folderId,
     },
