@@ -1,19 +1,10 @@
 import type { Metadata } from "next";
-import { Repeat } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { HabitsView } from "@/features/habits/components/habits-view";
+import { getHabits } from "@/features/habits/queries";
 
 export const metadata: Metadata = { title: "Habits" };
 
-export default function HabitsPage() {
-  return (
-    <>
-      <PageHeader title="Habits" description="Habits, streaks, a calendar heatmap." />
-      <EmptyState
-        icon={Repeat}
-        title="Habits arrive in Phase 4"
-        description="Streaks and a GitHub-style heatmap built on daily entries."
-      />
-    </>
-  );
+export default async function HabitsPage() {
+  const habits = await getHabits();
+  return <HabitsView habits={habits} />;
 }
