@@ -1,19 +1,16 @@
 import type { Metadata } from "next";
-import { Bookmark } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { LinksView } from "@/features/links/components/links-view";
+import { getBookmarks } from "@/features/links/queries";
+import { getTags } from "@/features/tags/queries";
 
 export const metadata: Metadata = { title: "Links" };
 
-export default function LinksPage() {
+export default async function LinksPage() {
+  const [bookmarks, tags] = await Promise.all([getBookmarks(), getTags()]);
   return (
-    <>
-      <PageHeader title="Links" description="Links & YouTube videos to watch later, with tags and previews." />
-      <EmptyState
-        icon={Bookmark}
-        title="Links arrive in Phase 3"
-        description="Auto previews, YouTube thumbnails, and a read/watched state."
-      />
-    </>
+    <LinksView
+      initialBookmarks={bookmarks}
+      tags={tags.map((t) => t.name)}
+    />
   );
 }
