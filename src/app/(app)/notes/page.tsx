@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
-import { StickyNote } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { NotesView } from "@/features/notes/components/notes-view";
+import { getNotes, getNoteProjects } from "@/features/notes/queries";
+import { getTags } from "@/features/tags/queries";
 
 export const metadata: Metadata = { title: "Notes" };
 
-export default function NotesPage() {
+export default async function NotesPage() {
+  const [notes, projects, tags] = await Promise.all([
+    getNotes(),
+    getNoteProjects(),
+    getTags(),
+  ]);
+
   return (
-    <>
-      <PageHeader title="Notes" description="Markdown notes with tags." />
-      <EmptyState
-        icon={StickyNote}
-        title="Notes arrive in Phase 3"
-        description="Markdown editing, pinning and shared tags."
-      />
-    </>
+    <NotesView
+      initialNotes={notes}
+      projects={projects}
+      tags={tags.map((t) => t.name)}
+    />
   );
 }
