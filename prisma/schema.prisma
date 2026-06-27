@@ -1,0 +1,270 @@
+// Wediff — single-user personal Life OS.
+// Design note: single-user, so domain tables intentionally carry NO `userId`.
+// The single `User` row exists only for login / 2FA. Add tenancy via migration
+// later if multi-user is ever needed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────── AUTH (single-user) ───────────────────────────
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
+  name             String?
+  twoFactorSecret  String? // TOTP secret (2FA)
+  twoFactorEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Global app key/value settings (theme, default currency, etc.)
+model Setting {
+  key   String @id
+  value Json
+}
+
+// ─────────────────────────── TAGS (shared) ───────────────────────────
+// Reused by Notes and Bookmarks: color + rename live in one place.
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  color     String?
+  createdAt DateTime   @default(now())
+  notes     Note[]
+  bookmarks Bookmark[]
+}
+
+// ─────────────────────────── PROJECTS ───────────────────────────
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  color       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tasks       Task[]
+  notes       Note[]
+}
+
+// ─────────────────────────── TASKS ───────────────────────────
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  order       Int          @default(0) // manual / Kanban ordering
+  projectId   String?
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+  @@index([projectId])
+  @@index([dueDate])
+}
+
+// ─────────────────────────── HABITS ───────────────────────────
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+}
+
+model Habit {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  icon        String?
+  frequency   HabitFrequency @default(DAILY)
+  target      Int            @default(1) // times per period (e.g. 3x/week)
+  archived    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  entries     HabitEntry[]
+}
+
+model HabitEntry {
+  id      String   @id @default(cuid())
+  habitId String
+  habit   Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date    DateTime @db.Date // one mark per day
+  count   Int      @default(1)
+  note    String?
+
+  @@unique([habitId, date]) // can't mark a habit twice the same day
+  @@index([date])
+}
+
+// ─────────────────────────── FINANCES ───────────────────────────
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum AccountType {
+  CASH
+  CARD
+  BANK
+  SAVINGS
+  OTHER
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  name         String
+  type         AccountType   @default(CARD)
+  currency     String        @default("KZT")
+  startBalance Decimal       @default(0) @db.Decimal(14, 2)
+  archived     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model Category {
+  id            String          @id @default(cuid())
+  name          String
+  type          TransactionType // income vs expense category
+  color         String?
+  icon          String?
+  transactions  Transaction[]
+  subscriptions Subscription[]
+
+  @@unique([name, type])
+}
+
+model Transaction {
+  id         String          @id @default(cuid())
+  type       TransactionType
+  amount     Decimal         @db.Decimal(14, 2)
+  date       DateTime
+  note       String?
+  accountId  String
+  account    Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt  DateTime        @default(now())
+
+  @@index([date])
+  @@index([accountId])
+  @@index([categoryId])
+}
+
+// ─────────────────────────── SUBSCRIPTIONS ───────────────────────────
+enum BillingCycle {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Subscription {
+  id                 String       @id @default(cuid())
+  name               String
+  amount             Decimal      @db.Decimal(14, 2)
+  currency           String       @default("KZT")
+  billingCycle       BillingCycle @default(MONTHLY)
+  nextPaymentDate    DateTime
+  reminderDaysBefore Int          @default(3) // drives the Dashboard badge
+  url                String?
+  icon               String?
+  active             Boolean      @default(true)
+  categoryId         String?
+  category           Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([nextPaymentDate])
+}
+
+// ─────────────────────────── NOTES ───────────────────────────
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @default("") // markdown
+  pinned    Boolean  @default(false)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  tags      Tag[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pinned])
+}
+
+// ─────────────────────────── LINKS / BOOKMARKS ───────────────────────────
+enum BookmarkType {
+  LINK
+  YOUTUBE
+}
+
+model Bookmark {
+  id           String       @id @default(cuid())
+  url          String
+  title        String?
+  description  String?
+  type         BookmarkType @default(LINK)
+  thumbnailUrl String? // preview / YouTube thumbnail
+  faviconUrl   String?
+  isArchived   Boolean      @default(false) // "watched / read"
+  tags         Tag[]
+  createdAt    DateTime     @default(now())
+
+  @@index([type])
+  @@index([isArchived])
+}
+
+// ─────────────────────────── FILES ───────────────────────────
+model Folder {
+  id        String       @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    Folder?      @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[]     @relation("FolderTree")
+  files     FileObject[]
+  createdAt DateTime     @default(now())
+}
+
+model FileObject {
+  id         String   @id @default(cuid())
+  name       String
+  storageKey String // key in Supabase Storage (S3-compatible)
+  mimeType   String
+  size       Int // bytes
+  folderId   String?
+  folder     Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([folderId])
+}

@@ -1,0 +1,33 @@
+import type { NextAuthConfig } from "next-auth";
+
+// Edge-safe config (no Prisma, no bcrypt). Used by middleware for route
+// protection and shared with the full Node config in auth.ts.
+export const authConfig = {
+  pages: {
+    signIn: "/login",
+  },
+  session: {
+    strategy: "jwt",
+  },
+  providers: [],
+  callbacks: {
+    authorized({ auth, request: { nextUrl } }) {
+      const loggedIn = !!auth?.user;
+      const onLogin = nextUrl.pathname.startsWith("/login");
+
+      if (onLogin) {
+        if (loggedIn) return Response.redirect(new URL("/dashboard", nextUrl));
+        return true;
+      }
+      return loggedIn;
+    },
+    jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string;
+      return session;
+    },
+  },
+} satisfies NextAuthConfig;

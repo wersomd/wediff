@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: wediff-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wediff
+      POSTGRES_PASSWORD: wediff
+      POSTGRES_DB: wediff
+    ports:
+      - "5434:5432"
+    volumes:
+      - wediff-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wediff -d wediff"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Lightweight web UI for the database — http://localhost:8080
+  adminer:
+    image: adminer:latest
+    container_name: wediff-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  wediff-db-data:
