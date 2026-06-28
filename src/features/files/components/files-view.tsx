@@ -163,7 +163,7 @@ export function FilesView({
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <Home className="size-4" />
-            Files
+            Файлы
           </Link>
           {breadcrumbs.map((b) => (
             <span key={b.id} className="flex items-center gap-1">
