@@ -3,7 +3,7 @@ import { NotesView } from "@/features/notes/components/notes-view";
 import { getNotes, getNoteProjects } from "@/features/notes/queries";
 import { getTags } from "@/features/tags/queries";
 
-export const metadata: Metadata = { title: "Notes" };
+export const metadata: Metadata = { title: "Заметки" };
 
 export default async function NotesPage() {
   const [notes, projects, tags] = await Promise.all([

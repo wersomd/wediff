@@ -19,17 +19,17 @@ export type NavItem = {
 };
 
 export const mainNav: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Tasks", href: "/tasks", icon: CheckSquare },
-  { title: "Projects", href: "/projects", icon: FolderKanban },
-  { title: "Habits", href: "/habits", icon: Repeat },
-  { title: "Finances", href: "/finances", icon: Wallet },
-  { title: "Subscriptions", href: "/subscriptions", icon: CreditCard },
-  { title: "Notes", href: "/notes", icon: StickyNote },
-  { title: "Links", href: "/links", icon: Bookmark },
-  { title: "Files", href: "/files", icon: Files },
+  { title: "Главная", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Задачи", href: "/tasks", icon: CheckSquare },
+  { title: "Проекты", href: "/projects", icon: FolderKanban },
+  { title: "Привычки", href: "/habits", icon: Repeat },
+  { title: "Финансы", href: "/finances", icon: Wallet },
+  { title: "Подписки", href: "/subscriptions", icon: CreditCard },
+  { title: "Заметки", href: "/notes", icon: StickyNote },
+  { title: "Ссылки", href: "/links", icon: Bookmark },
+  { title: "Файлы", href: "/files", icon: Files },
 ];
 
 export const footerNav: NavItem[] = [
-  { title: "Settings", href: "/settings", icon: Settings },
+  { title: "Настройки", href: "/settings", icon: Settings },
 ];

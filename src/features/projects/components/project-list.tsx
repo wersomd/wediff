@@ -50,7 +50,7 @@ export function ProjectList({ projects }: { projects: ProjectWithCount[] }) {
   return (
     <>
       <PageHeader
-        title="Projects"
+        title="Проекты"
         description="Сгруппируйте задачи по проектам и отслеживайте их статус."
         action={
           <Button onClick={openCreate}>

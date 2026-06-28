@@ -88,7 +88,7 @@ export function NotesView({
   return (
     <>
       <PageHeader
-        title="Notes"
+        title="Заметки"
         description="Заметки в Markdown с тегами и привязкой к проектам."
         action={
           <Button onClick={openCreate}>

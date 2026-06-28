@@ -90,7 +90,7 @@ export function LinksView({
   return (
     <>
       <PageHeader
-        title="Links"
+        title="Ссылки"
         description="Закладки и видео с тегами; YouTube и favicon определяются автоматически."
         action={
           <Button onClick={openCreate}>

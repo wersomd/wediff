@@ -4,7 +4,7 @@ import { SubscriptionsView } from "@/features/subscriptions/components/subscript
 import { getSubscriptions } from "@/features/subscriptions/queries";
 import { getCategories } from "@/features/finances/queries";
 
-export const metadata: Metadata = { title: "Subscriptions" };
+export const metadata: Metadata = { title: "Подписки" };
 
 export default async function SubscriptionsPage() {
   const [subscriptions, categories] = await Promise.all([

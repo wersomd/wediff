@@ -6,7 +6,7 @@ import {
   getTransactions,
 } from "@/features/finances/queries";
 
-export const metadata: Metadata = { title: "Finances" };
+export const metadata: Metadata = { title: "Финансы" };
 
 export default async function FinancesPage() {
   const [accounts, transactions, categories] = await Promise.all([

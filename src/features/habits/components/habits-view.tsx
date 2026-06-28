@@ -107,7 +107,7 @@ export function HabitsView({ habits }: { habits: HabitWithEntries[] }) {
   return (
     <>
       <PageHeader
-        title="Habits"
+        title="Привычки"
         description="Ежедневные и недельные привычки со стриками и прогрессом."
         action={
           <Button onClick={openCreate}>

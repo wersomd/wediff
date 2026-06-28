@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "Settings" };
+export const metadata: Metadata = { title: "Настройки" };
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Аккаунт, безопасность и настройки приложения." />
+      <PageHeader title="Настройки" description="Аккаунт, безопасность и настройки приложения." />
       <div className="grid max-w-2xl gap-4">
         <Card>
           <CardHeader>

@@ -5,7 +5,7 @@ import { FilesView } from "@/features/files/components/files-view";
 import { getFolderContents } from "@/features/files/queries";
 import { isStorageConfigured } from "@/lib/storage";
 
-export const metadata: Metadata = { title: "Files" };
+export const metadata: Metadata = { title: "Файлы" };
 
 export default async function FilesPage({
   searchParams,
@@ -21,7 +21,7 @@ export default async function FilesPage({
   return (
     <>
       <PageHeader
-        title="Files"
+        title="Файлы"
         description="Папки и файлы в Supabase Storage."
       />
 

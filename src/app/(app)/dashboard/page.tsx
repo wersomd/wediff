@@ -15,7 +15,7 @@ import { PriorityDot } from "@/features/tasks/components/priority-badge";
 import { formatMoney } from "@/features/finances/money";
 import { getDashboardSummary } from "@/features/dashboard/queries";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = { title: "Главная" };
 
 export default async function DashboardPage() {
   const s = await getDashboardSummary();
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Dashboard"
+        title="Главная"
         description="Вся жизнь на одном экране."
       />
 

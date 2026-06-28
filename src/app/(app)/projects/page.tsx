@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProjectList } from "@/features/projects/components/project-list";
 import { getProjects } from "@/features/projects/queries";
 
-export const metadata: Metadata = { title: "Projects" };
+export const metadata: Metadata = { title: "Проекты" };
 
 export default async function ProjectsPage() {
   const projects = await getProjects();

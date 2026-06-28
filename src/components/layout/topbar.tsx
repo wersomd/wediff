@@ -20,7 +20,7 @@ export function Topbar({
           type="button"
           onClick={() => setOpen(true)}
           className="-ml-1 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
-          aria-label="Open menu"
+          aria-label="Открыть меню"
         >
           <Menu className="size-5" />
         </button>
@@ -44,7 +44,7 @@ export function Topbar({
               type="button"
               onClick={() => setOpen(false)}
               className="absolute right-2 top-3 flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label="Close menu"
+              aria-label="Закрыть меню"
             >
               <X className="size-5" />
             </button>

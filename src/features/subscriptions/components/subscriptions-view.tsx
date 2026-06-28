@@ -112,7 +112,7 @@ export function SubscriptionsView({
   return (
     <>
       <PageHeader
-        title="Subscriptions"
+        title="Подписки"
         description="Регулярные платежи с напоминанием о следующем списании."
         action={
           <Button onClick={openCreate}>

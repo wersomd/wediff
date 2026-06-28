@@ -19,7 +19,7 @@ export function AccountMenu({
   user: { email?: string | null; name?: string | null };
 }) {
   const [pending, startTransition] = useTransition();
-  const label = user.name || user.email || "Account";
+  const label = user.name || user.email || "Аккаунт";
   const initial = (user.name || user.email || "W").charAt(0).toUpperCase();
 
   return (

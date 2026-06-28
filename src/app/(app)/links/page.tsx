@@ -3,7 +3,7 @@ import { LinksView } from "@/features/links/components/links-view";
 import { getBookmarks } from "@/features/links/queries";
 import { getTags } from "@/features/tags/queries";
 
-export const metadata: Metadata = { title: "Links" };
+export const metadata: Metadata = { title: "Ссылки" };
 
 export default async function LinksPage() {
   const [bookmarks, tags] = await Promise.all([getBookmarks(), getTags()]);

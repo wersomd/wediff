@@ -122,7 +122,7 @@ export function FinancesView({
   return (
     <>
       <PageHeader
-        title="Finances"
+        title="Финансы"
         description="Счета, баланс и история доходов и расходов."
         action={
           <div className="flex gap-2">
