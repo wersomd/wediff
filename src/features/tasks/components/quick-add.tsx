@@ -57,8 +57,10 @@ export function QuickAdd({
         }
       }}
       onBlur={() => {
-        commit();
-        setActive(false);
+        // Don't yank the field away on a stray click. Close only when it's
+        // empty; a typed draft stays put so a misclick never loses it or
+        // silently creates a task. Enter commits, Escape cancels.
+        if (!value.trim()) setActive(false);
       }}
     />
   );
