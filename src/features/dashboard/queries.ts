@@ -1,8 +1,9 @@
 import "server-only";
 import { addDays, endOfDay, format } from "date-fns";
-import { TaskStatus } from "@prisma/client";
+import { DebtStatus, TaskStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAccountsWithBalance } from "@/features/finances/queries";
+import { computeDebtTotals, isOverdue } from "@/features/debts/summary";
 
 export async function getDashboardSummary() {
   const now = new Date();
@@ -18,6 +19,7 @@ export async function getDashboardSummary() {
     accounts,
     upcomingSubs,
     pinnedNotes,
+    openDebts,
   ] = await Promise.all([
     // Tasks due today or overdue, not finished.
     db.task.findMany({
@@ -45,7 +47,34 @@ export async function getDashboardSummary() {
       include: { category: { select: { name: true } } },
     }),
     db.note.count({ where: { pinned: true } }),
+    db.debt.findMany({
+      where: { status: DebtStatus.OPEN },
+      select: {
+        direction: true,
+        currency: true,
+        status: true,
+        dueDate: true,
+        principal: true,
+        payments: { select: { amount: true } },
+      },
+    }),
   ]);
+
+  // Open debts → per-currency net balance + overdue count.
+  const debtRows = openDebts.map((d) => {
+    const paid = d.payments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
+    return {
+      direction: d.direction,
+      currency: d.currency,
+      status: d.status,
+      dueDate: d.dueDate,
+      remaining: Math.max(d.principal.toNumber() - paid, 0),
+    };
+  });
+  const debtTotals = computeDebtTotals(debtRows);
+  const overdueDebts = debtRows.filter((d) =>
+    isOverdue({ dueDate: d.dueDate, status: d.status }, now),
+  ).length;
 
   // Balance totals per currency (active accounts).
   const balances: Record<string, number> = {};
@@ -80,6 +109,10 @@ export async function getDashboardSummary() {
       category: s.category,
     })),
     pinnedNotes,
+    debts: {
+      totals: debtTotals,
+      overdue: overdueDebts,
+    },
   };
 }
 

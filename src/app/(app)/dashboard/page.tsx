@@ -7,6 +7,7 @@ import {
   CheckSquare,
   CreditCard,
   Flame,
+  HandCoins,
   Pin,
   Wallet,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export const metadata: Metadata = { title: "Главная" };
 export default async function DashboardPage() {
   const s = await getDashboardSummary();
   const currencies = Object.entries(s.balances);
+  const debtCurrencies = Object.entries(s.debts.totals);
 
   return (
     <>
@@ -28,7 +30,7 @@ export default async function DashboardPage() {
         description="Вся жизнь на одном экране."
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard
           href="/tasks"
           icon={<CheckSquare className="size-5" />}
@@ -67,6 +69,26 @@ export default async function DashboardPage() {
           label="Платежи (7 дней)"
           value={String(s.subscriptions.length)}
           hint="ближайшие списания"
+        />
+        <StatCard
+          href="/debts"
+          icon={<HandCoins className="size-5" />}
+          label="Баланс долгов"
+          value={
+            debtCurrencies.length
+              ? formatMoney(debtCurrencies[0][1].net, debtCurrencies[0][0])
+              : "—"
+          }
+          hint={
+            s.debts.overdue > 0
+              ? `${s.debts.overdue} просрочено`
+              : debtCurrencies.length > 1
+                ? debtCurrencies
+                    .slice(1)
+                    .map(([c, t]) => formatMoney(t.net, c))
+                    .join(" · ")
+                : "кто кому должен"
+          }
         />
       </div>
 
