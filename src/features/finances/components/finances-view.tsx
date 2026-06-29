@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   Archive,
   ArchiveRestore,
+  ArrowLeftRight,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -32,6 +33,8 @@ import { cn } from "@/lib/utils";
 import { AccountDialog } from "./account-dialog";
 import { TransactionDialog } from "./transaction-dialog";
 import { TransactionList } from "./transaction-list";
+import { TransferDialog } from "./transfer-dialog";
+import { BudgetsSection } from "./budgets-section";
 import {
   deleteAccount,
   deleteTransaction,
@@ -41,6 +44,7 @@ import { ACCOUNT_TYPE_LABELS } from "../constants";
 import { formatMoney } from "../money";
 import type {
   AccountWithBalance,
+  BudgetRow,
   CategoryOption,
   TransactionRow,
 } from "../queries";
@@ -51,16 +55,19 @@ export function FinancesView({
   accounts,
   transactions,
   categories,
+  budgets,
 }: {
   accounts: AccountWithBalance[];
   transactions: TransactionRow[];
   categories: CategoryOption[];
+  budgets: BudgetRow[];
 }) {
   const router = useRouter();
   const [, start] = useTransition();
   const [accountDialog, setAccountDialog] = useState(false);
   const [editingAccount, setEditingAccount] = useState<AccountWithBalance | null>(null);
   const [txDialog, setTxDialog] = useState(false);
+  const [transferDialog, setTransferDialog] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionRow | null>(null);
   const [accFilter, setAccFilter] = useState(ALL);
   const [typeFilter, setTypeFilter] = useState(ALL);
@@ -135,6 +142,14 @@ export function FinancesView({
             >
               <Plus className="size-4" />
               Счёт
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setTransferDialog(true)}
+              disabled={activeAccounts.length < 2}
+            >
+              <ArrowLeftRight className="size-4" />
+              Перевод
             </Button>
             <Button
               onClick={() => {
@@ -225,6 +240,8 @@ export function FinancesView({
             ))}
           </div>
 
+          <BudgetsSection budgets={budgets} categories={categories} />
+
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">Транзакции</h2>
             <div className="flex gap-2">
@@ -284,6 +301,11 @@ export function FinancesView({
         transaction={editingTx}
         accounts={activeAccounts}
         categories={categories}
+      />
+      <TransferDialog
+        open={transferDialog}
+        onOpenChange={setTransferDialog}
+        accounts={activeAccounts}
       />
     </>
   );
