@@ -1,9 +1,10 @@
 import "server-only";
 import { addDays, endOfDay, format } from "date-fns";
-import { DebtStatus, TaskStatus } from "@prisma/client";
+import { DebtStatus, GoalStatus, TaskStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAccountsWithBalance } from "@/features/finances/queries";
 import { computeDebtTotals, isOverdue } from "@/features/debts/summary";
+import { getAgenda } from "@/features/agenda/queries";
 
 export async function getDashboardSummary() {
   const now = new Date();
@@ -20,6 +21,9 @@ export async function getDashboardSummary() {
     upcomingSubs,
     pinnedNotes,
     openDebts,
+    activeGoals,
+    todayEntry,
+    agenda,
   ] = await Promise.all([
     // Tasks due today or overdue, not finished.
     db.task.findMany({
@@ -58,6 +62,17 @@ export async function getDashboardSummary() {
         payments: { select: { amount: true } },
       },
     }),
+    db.goal.findMany({
+      where: { status: GoalStatus.ACTIVE },
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      take: 8,
+      include: { keyResults: { select: { done: true } } },
+    }),
+    db.journalEntry.findUnique({
+      where: { date: todayDate },
+      select: { mood: true },
+    }),
+    getAgenda(),
   ]);
 
   // Open debts → per-currency net balance + overdue count.
@@ -82,6 +97,22 @@ export async function getDashboardSummary() {
     if (a.archived) continue;
     balances[a.currency] = (balances[a.currency] ?? 0) + a.balance;
   }
+
+  // Active goals with a computed progress %: numeric target → current/target,
+  // otherwise key-results done/total.
+  const goals = activeGoals.map((g) => {
+    const target = g.targetValue ? g.targetValue.toNumber() : null;
+    const current = g.currentValue.toNumber();
+    const krTotal = g.keyResults.length;
+    const krDone = g.keyResults.filter((k) => k.done).length;
+    const progress =
+      target && target > 0
+        ? Math.min(100, Math.round((current / target) * 100))
+        : krTotal > 0
+          ? Math.round((krDone / krTotal) * 100)
+          : 0;
+    return { id: g.id, title: g.title, progress };
+  });
 
   return {
     tasks: {
@@ -113,6 +144,9 @@ export async function getDashboardSummary() {
       totals: debtTotals,
       overdue: overdueDebts,
     },
+    goals,
+    todayMood: todayEntry?.mood ?? null,
+    agenda: agenda.slice(0, 7),
   };
 }
 
