@@ -1,0 +1,239 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import {
+  DebtDirection,
+  DebtStatus,
+  TransactionType,
+  type Prisma,
+} from "@prisma/client";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { debtCreateSchema, paymentCreateSchema } from "./schema";
+import { DEBT_CATEGORY } from "./constants";
+
+async function requireAuth() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+}
+
+type ActionResult = { ok: true } | { error: string };
+
+function clean(value?: string) {
+  const v = value?.trim();
+  return v ? v : null;
+}
+
+function toDate(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function revalidateDebts() {
+  revalidatePath("/debts");
+  revalidatePath("/finances"); // balances changed
+  revalidatePath("/dashboard"); // summary widget
+}
+
+// Disbursement: borrowing money is INCOME to my account; lending money is
+// EXPENSE from it.
+function disbursementType(direction: DebtDirection): TransactionType {
+  return direction === DebtDirection.I_OWE
+    ? TransactionType.INCOME
+    : TransactionType.EXPENSE;
+}
+
+// Repayment is the mirror image: paying back my debt is EXPENSE; being repaid
+// is INCOME.
+function repaymentType(direction: DebtDirection): TransactionType {
+  return direction === DebtDirection.I_OWE
+    ? TransactionType.EXPENSE
+    : TransactionType.INCOME;
+}
+
+async function resolveDebtCategory(
+  tx: Prisma.TransactionClient,
+  type: TransactionType,
+): Promise<string> {
+  const cat = await tx.category.upsert({
+    where: { name_type: { name: DEBT_CATEGORY, type } },
+    create: { name: DEBT_CATEGORY, type },
+    update: {},
+  });
+  return cat.id;
+}
+
+// ── Debts ───────────────────────────────────────────────────────────────────
+export async function createDebt(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = debtCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const {
+    counterparty,
+    direction,
+    amount,
+    currency,
+    accountId,
+    borrowedOn,
+    dueDate,
+    description,
+  } = parsed.data;
+
+  const account = await db.account.findUnique({ where: { id: accountId } });
+  if (!account) return { error: "Счёт не найден" };
+  if (account.currency !== currency) {
+    return {
+      error: `Валюта счёта (${account.currency}) не совпадает с валютой долга (${currency})`,
+    };
+  }
+
+  const type = disbursementType(direction);
+  await db.$transaction(async (tx) => {
+    const cp = await tx.counterparty.upsert({
+      where: { name: counterparty },
+      create: { name: counterparty },
+      update: {},
+    });
+    const categoryId = await resolveDebtCategory(tx, type);
+    const transaction = await tx.transaction.create({
+      data: {
+        type,
+        amount,
+        date: toDate(borrowedOn),
+        accountId,
+        categoryId,
+        note: `Долг: ${counterparty}${description ? ` — ${description}` : ""}`,
+      },
+    });
+    await tx.debt.create({
+      data: {
+        counterpartyId: cp.id,
+        direction,
+        principal: amount,
+        currency,
+        description: clean(description),
+        borrowedOn: toDate(borrowedOn),
+        dueDate: dueDate ? toDate(dueDate) : null,
+        disbursementTransactionId: transaction.id,
+      },
+    });
+  });
+  revalidateDebts();
+  return { ok: true };
+}
+
+// Deletes a debt, its payments (cascade), and every linked Transaction so the
+// finance books roll back cleanly. The counterparty row is left in place.
+export async function deleteDebt(id: string): Promise<ActionResult> {
+  await requireAuth();
+  if (!id) return { error: "Нет id" };
+  const debt = await db.debt.findUnique({
+    where: { id },
+    include: { payments: { select: { transactionId: true } } },
+  });
+  if (!debt) return { error: "Долг не найден" };
+
+  const txIds = [
+    debt.disbursementTransactionId,
+    ...debt.payments.map((p) => p.transactionId),
+  ].filter((x): x is string => Boolean(x));
+
+  await db.$transaction(async (tx) => {
+    await tx.debt.delete({ where: { id } }); // payments cascade
+    if (txIds.length) {
+      await tx.transaction.deleteMany({ where: { id: { in: txIds } } });
+    }
+  });
+  revalidateDebts();
+  return { ok: true };
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+export async function addPayment(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = paymentCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const { debtId, amount, accountId, paidOn, note } = parsed.data;
+
+  const debt = await db.debt.findUnique({
+    where: { id: debtId },
+    include: {
+      payments: { select: { amount: true } },
+      counterparty: { select: { name: true } },
+    },
+  });
+  if (!debt) return { error: "Долг не найден" };
+
+  const account = await db.account.findUnique({ where: { id: accountId } });
+  if (!account) return { error: "Счёт не найден" };
+  if (account.currency !== debt.currency) {
+    return {
+      error: `Валюта счёта (${account.currency}) не совпадает с валютой долга (${debt.currency})`,
+    };
+  }
+
+  const paid = debt.payments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
+  const remaining = debt.principal.toNumber() - paid;
+  if (amount > remaining + 1e-6) {
+    return { error: `Сумма больше остатка (${remaining})` };
+  }
+
+  const type = repaymentType(debt.direction);
+  const fullyPaid = remaining - amount <= 1e-6;
+
+  await db.$transaction(async (tx) => {
+    const categoryId = await resolveDebtCategory(tx, type);
+    const transaction = await tx.transaction.create({
+      data: {
+        type,
+        amount,
+        date: toDate(paidOn),
+        accountId,
+        categoryId,
+        note: `Погашение долга: ${debt.counterparty.name}`,
+      },
+    });
+    await tx.debtPayment.create({
+      data: {
+        debtId,
+        amount,
+        paidOn: toDate(paidOn),
+        note: clean(note),
+        transactionId: transaction.id,
+      },
+    });
+    if (fullyPaid) {
+      await tx.debt.update({
+        where: { id: debtId },
+        data: { status: DebtStatus.PAID },
+      });
+    }
+  });
+  revalidateDebts();
+  return { ok: true };
+}
+
+// Removes a payment, its linked Transaction, and reopens the debt (a removed
+// payment means it is no longer fully settled).
+export async function deletePayment(id: string): Promise<ActionResult> {
+  await requireAuth();
+  if (!id) return { error: "Нет id" };
+  const payment = await db.debtPayment.findUnique({ where: { id } });
+  if (!payment) return { error: "Платёж не найден" };
+
+  await db.$transaction(async (tx) => {
+    if (payment.transactionId) {
+      await tx.transaction.deleteMany({ where: { id: payment.transactionId } });
+    }
+    await tx.debtPayment.delete({ where: { id } });
+    await tx.debt.update({
+      where: { id: payment.debtId },
+      data: { status: DebtStatus.OPEN },
+    });
+  });
+  revalidateDebts();
+  return { ok: true };
+}

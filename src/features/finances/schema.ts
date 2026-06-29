@@ -25,5 +25,24 @@ export const transactionUpdateSchema = transactionCreateSchema.extend({
   id: z.string().min(1),
 });
 
+export const transferSchema = z
+  .object({
+    fromAccountId: z.string().min(1, "Выберите счёт списания"),
+    toAccountId: z.string().min(1, "Выберите счёт зачисления"),
+    amount: z.coerce.number().positive("Сумма должна быть больше нуля"),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Некорректная дата"),
+    note: z.string().trim().max(500).optional().or(z.literal("")),
+  })
+  .refine((d) => d.fromAccountId !== d.toAccountId, {
+    message: "Счета должны отличаться",
+    path: ["toAccountId"],
+  });
+
+export const budgetSchema = z.object({
+  categoryId: z.string().min(1, "Выберите категорию"),
+  amount: z.coerce.number().positive("Лимит должен быть больше нуля"),
+});
+
 export type AccountCreateInput = z.input<typeof accountCreateSchema>;
 export type TransactionCreateInput = z.input<typeof transactionCreateSchema>;
+export type TransferInput = z.input<typeof transferSchema>;

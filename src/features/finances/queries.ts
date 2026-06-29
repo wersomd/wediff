@@ -1,4 +1,5 @@
 import "server-only";
+import { endOfMonth, startOfMonth } from "date-fns";
 import { TransactionType } from "@prisma/client";
 import { db } from "@/lib/db";
 
@@ -70,3 +71,39 @@ export async function getCategories() {
 }
 
 export type CategoryOption = Awaited<ReturnType<typeof getCategories>>[number];
+
+// Budgets with this month's spend for each budgeted category. Amounts are
+// summed across currencies (single-user MVP); the monthly limit is treated as
+// the default currency.
+export async function getBudgetsWithSpend() {
+  const now = new Date();
+  const from = startOfMonth(now);
+  const to = endOfMonth(now);
+
+  const budgets = await db.budget.findMany({
+    include: { category: { select: { id: true, name: true, color: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  if (budgets.length === 0) return [];
+
+  const spend = await db.transaction.groupBy({
+    by: ["categoryId"],
+    where: {
+      type: TransactionType.EXPENSE,
+      date: { gte: from, lte: to },
+      categoryId: { in: budgets.map((b) => b.categoryId) },
+    },
+    _sum: { amount: true },
+  });
+
+  return budgets.map((b) => ({
+    categoryId: b.categoryId,
+    category: b.category,
+    amount: b.amount.toNumber(),
+    spent:
+      spend.find((s) => s.categoryId === b.categoryId)?._sum.amount?.toNumber() ??
+      0,
+  }));
+}
+
+export type BudgetRow = Awaited<ReturnType<typeof getBudgetsWithSpend>>[number];

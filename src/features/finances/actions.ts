@@ -6,10 +6,16 @@ import { db } from "@/lib/db";
 import {
   accountCreateSchema,
   accountUpdateSchema,
+  budgetSchema,
   transactionCreateSchema,
   transactionUpdateSchema,
+  transferSchema,
 } from "./schema";
-import type { TransactionType } from "@prisma/client";
+import { TransactionType } from "@prisma/client";
+
+// Service category for the paired transactions of an account-to-account
+// transfer, so transfers don't read as real income/expense in analytics.
+const TRANSFER_CATEGORY = "Перевод";
 
 async function requireAuth() {
   const session = await auth();
@@ -137,6 +143,89 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   await requireAuth();
   if (!id) return { error: "Нет id" };
   await db.transaction.delete({ where: { id } });
+  revalidateFinances();
+  return { ok: true };
+}
+
+// ── Transfers ─────────────────────────────────────────────────────────────────
+// A transfer is a paired EXPENSE (from) + INCOME (to) in the "Перевод" category.
+// Both accounts must share a currency — no FX conversion.
+export async function createTransfer(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = transferSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const { fromAccountId, toAccountId, amount, date, note } = parsed.data;
+
+  const [from, to] = await Promise.all([
+    db.account.findUnique({ where: { id: fromAccountId } }),
+    db.account.findUnique({ where: { id: toAccountId } }),
+  ]);
+  if (!from || !to) return { error: "Счёт не найден" };
+  if (from.currency !== to.currency) {
+    return { error: "Перевод возможен только между счетами одной валюты" };
+  }
+
+  const when = new Date(`${date}T00:00:00.000Z`);
+  const label = `${TRANSFER_CATEGORY}: ${from.name} → ${to.name}${note ? ` — ${note.trim()}` : ""}`;
+  await db.$transaction(async (tx) => {
+    const expenseCat = await tx.category.upsert({
+      where: { name_type: { name: TRANSFER_CATEGORY, type: TransactionType.EXPENSE } },
+      create: { name: TRANSFER_CATEGORY, type: TransactionType.EXPENSE },
+      update: {},
+    });
+    const incomeCat = await tx.category.upsert({
+      where: { name_type: { name: TRANSFER_CATEGORY, type: TransactionType.INCOME } },
+      create: { name: TRANSFER_CATEGORY, type: TransactionType.INCOME },
+      update: {},
+    });
+    await tx.transaction.create({
+      data: {
+        type: TransactionType.EXPENSE,
+        amount,
+        date: when,
+        accountId: fromAccountId,
+        categoryId: expenseCat.id,
+        note: label,
+      },
+    });
+    await tx.transaction.create({
+      data: {
+        type: TransactionType.INCOME,
+        amount,
+        date: when,
+        accountId: toAccountId,
+        categoryId: incomeCat.id,
+        note: label,
+      },
+    });
+  });
+  revalidateFinances();
+  return { ok: true };
+}
+
+// ── Budgets ───────────────────────────────────────────────────────────────────
+export async function setBudget(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = budgetSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const { categoryId, amount } = parsed.data;
+  await db.budget.upsert({
+    where: { categoryId },
+    create: { categoryId, amount },
+    update: { amount },
+  });
+  revalidateFinances();
+  return { ok: true };
+}
+
+export async function deleteBudget(categoryId: string): Promise<ActionResult> {
+  await requireAuth();
+  if (!categoryId) return { error: "Нет категории" };
+  await db.budget.deleteMany({ where: { categoryId } });
   revalidateFinances();
   return { ok: true };
 }
