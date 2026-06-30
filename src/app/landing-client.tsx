@@ -6,7 +6,7 @@ import { BookOpen, CheckSquare, Flame, Heart, Target, Wallet } from "lucide-reac
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] } },
 };
 
 const stagger: Variants = {
@@ -206,7 +206,7 @@ function DashboardMockup() {
 
 export function LandingClient() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground">
       {/* ── Hero ── */}
       <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 text-center">
         <div
@@ -221,6 +221,7 @@ export function LandingClient() {
         {PARTICLES.map((p, i) => (
           <span
             key={i}
+            aria-hidden="true"
             className="pointer-events-none absolute rounded-full bg-primary/30"
             style={{
               top: p.top,
@@ -236,7 +237,6 @@ export function LandingClient() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          transition={{ delay: 0 }}
           className="text-5xl font-bold tracking-tight sm:text-7xl"
         >
           Твоя жизнь.
@@ -298,7 +298,7 @@ export function LandingClient() {
                 <motion.div
                   key={name}
                   variants={fadeUp}
-                  className={`rounded-xl border border-border bg-card p-5 border-l-4 ${cls.border}`}
+                  className={`rounded-xl border border-l-4 border-border ${cls.border} bg-card p-5`}
                 >
                   <div className={`mb-3 inline-flex rounded-lg p-2 ${cls.bg}`}>
                     <Icon className={`size-5 ${cls.icon}`} />
@@ -333,9 +333,9 @@ export function LandingClient() {
             className="overflow-hidden rounded-2xl border border-border shadow-2xl shadow-primary/10"
           >
             <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-3">
-              <span className="size-3 rounded-full bg-rose-500" />
-              <span className="size-3 rounded-full bg-amber-500" />
-              <span className="size-3 rounded-full bg-emerald-500" />
+              <span aria-hidden="true" className="size-3 rounded-full bg-rose-500" />
+              <span aria-hidden="true" className="size-3 rounded-full bg-amber-500" />
+              <span aria-hidden="true" className="size-3 rounded-full bg-emerald-500" />
               <div className="ml-4 flex-1 rounded-md bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
                 wediff.app/dashboard
               </div>
@@ -373,6 +373,6 @@ export function LandingClient() {
       <footer className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
         Wediff · 2026
       </footer>
-    </div>
+    </main>
   );
 }
