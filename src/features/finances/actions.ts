@@ -7,6 +7,8 @@ import {
   accountCreateSchema,
   accountUpdateSchema,
   budgetSchema,
+  categoryCreateSchema,
+  categoryUpdateSchema,
   transactionCreateSchema,
   transactionUpdateSchema,
   transferSchema,
@@ -227,5 +229,44 @@ export async function deleteBudget(categoryId: string): Promise<ActionResult> {
   if (!categoryId) return { error: "Нет категории" };
   await db.budget.deleteMany({ where: { categoryId } });
   revalidateFinances();
+  return { ok: true };
+}
+
+// ── Categories ────────────────────────────────────────────────────────────────
+export async function createCategory(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = categoryCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const { name, type, color } = parsed.data;
+  const existing = await db.category.findUnique({ where: { name_type: { name, type } } });
+  if (existing) return { error: "Категория с таким названием уже существует" };
+  await db.category.create({ data: { name, type, color } });
+  revalidatePath("/finances");
+  return { ok: true };
+}
+
+export async function updateCategory(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = categoryUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const { id, name, color } = parsed.data;
+  await db.category.update({ where: { id }, data: { name, color } });
+  revalidatePath("/finances");
+  return { ok: true };
+}
+
+export async function deleteCategory(id: string): Promise<ActionResult> {
+  await requireAuth();
+  if (!id) return { error: "Нет id" };
+  const count = await db.transaction.count({ where: { categoryId: id } });
+  if (count > 0) {
+    return { error: `Нельзя удалить: категория используется в ${count} транзакциях` };
+  }
+  await db.category.delete({ where: { id } });
+  revalidatePath("/finances");
   return { ok: true };
 }

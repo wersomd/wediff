@@ -72,6 +72,22 @@ export async function getCategories() {
 
 export type CategoryOption = Awaited<ReturnType<typeof getCategories>>[number];
 
+export async function getCategoriesWithCount() {
+  const rows = await db.category.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      color: true,
+      _count: { select: { transactions: true } },
+    },
+  });
+  return rows;
+}
+
+export type CategoryWithCount = Awaited<ReturnType<typeof getCategoriesWithCount>>[number];
+
 // Budgets with this month's spend for each budgeted category. Amounts are
 // summed across currencies (single-user MVP); the monthly limit is treated as
 // the default currency.

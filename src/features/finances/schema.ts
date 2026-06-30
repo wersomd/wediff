@@ -43,6 +43,16 @@ export const budgetSchema = z.object({
   amount: z.coerce.number().positive("Лимит должен быть больше нуля"),
 });
 
+export const categoryCreateSchema = z.object({
+  name: z.string().trim().min(1, "Введите название").max(60),
+  type: z.nativeEnum(TransactionType),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Некорректный цвет"),
+});
+
+export const categoryUpdateSchema = categoryCreateSchema.extend({
+  id: z.string().min(1),
+});
+
 export type AccountCreateInput = z.input<typeof accountCreateSchema>;
 export type TransactionCreateInput = z.input<typeof transactionCreateSchema>;
 export type TransferInput = z.input<typeof transferSchema>;
