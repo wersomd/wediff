@@ -253,7 +253,13 @@ export async function updateCategory(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
   }
-  const { id, name, color } = parsed.data;
+  const { id, name, type, color } = parsed.data;
+  const conflict = await db.category.findUnique({
+    where: { name_type: { name, type } },
+  });
+  if (conflict && conflict.id !== id) {
+    return { error: "Категория с таким названием уже существует" };
+  }
   await db.category.update({ where: { id }, data: { name, color } });
   revalidatePath("/finances");
   return { ok: true };
@@ -262,9 +268,15 @@ export async function updateCategory(input: unknown): Promise<ActionResult> {
 export async function deleteCategory(id: string): Promise<ActionResult> {
   await requireAuth();
   if (!id) return { error: "Нет id" };
-  const count = await db.transaction.count({ where: { categoryId: id } });
-  if (count > 0) {
-    return { error: `Нельзя удалить: категория используется в ${count} транзакциях` };
+  const [txCount, budgetCount] = await Promise.all([
+    db.transaction.count({ where: { categoryId: id } }),
+    db.budget.count({ where: { categoryId: id } }),
+  ]);
+  if (txCount > 0) {
+    return { error: `Нельзя удалить: категория используется в ${txCount} транзакциях` };
+  }
+  if (budgetCount > 0) {
+    return { error: "Нельзя удалить: по категории задан бюджет. Сначала удалите бюджет." };
   }
   await db.category.delete({ where: { id } });
   revalidatePath("/finances");

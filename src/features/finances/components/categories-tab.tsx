@@ -18,7 +18,11 @@ export function CategoriesTab({ categories }: { categories: CategoryWithCount[] 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryWithCount | null>(null);
 
-  const filtered = categories.filter((c) => c.type === type);
+  const SYSTEM_CATEGORIES = ["Перевод"];
+
+  const filtered = categories.filter(
+    (c) => c.type === type && !SYSTEM_CATEGORIES.includes(c.name),
+  );
 
   function openAdd() {
     setEditing(null);
