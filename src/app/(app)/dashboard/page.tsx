@@ -15,7 +15,8 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { PriorityDot } from "@/features/tasks/components/priority-badge";
+import { DashboardTasks } from "@/features/dashboard/components/dashboard-tasks";
+import { DEFAULT_HABIT_COLOR } from "@/features/habits/constants";
 import { formatMoney } from "@/features/finances/money";
 import { MOOD_EMOJI, MOOD_LABEL } from "@/features/journal/constants";
 import { getDashboardSummary } from "@/features/dashboard/queries";
@@ -236,34 +237,44 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel title="Задачи на сегодня" href="/tasks" icon={CheckSquare} accent="violet">
-          {s.tasks.due.length === 0 ? (
-            <Empty text="На сегодня ничего не запланировано." />
+          <DashboardTasks tasks={s.tasks.due} />
+        </Panel>
+      </div>
+
+      {/* Habits + Goals */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Panel title="Привычки" href="/habits" icon={Flame} accent="amber">
+          {s.habits.list.length === 0 ? (
+            <Empty text="Привычек пока нет. Заведите первую." />
           ) : (
-            <ul className="divide-y divide-border">
-              {s.tasks.due.map((t) => {
-                const overdue = differenceInCalendarDays(t.dueDate, now) < 0;
+            <ul className="space-y-3 pt-1">
+              {s.habits.list.map((h) => {
+                const color = h.color ?? DEFAULT_HABIT_COLOR;
+                const pct = Math.round((h.weekDone / 7) * 100);
                 return (
-                  <li key={t.id} className="flex items-center gap-2 py-2.5">
-                    <PriorityDot priority={t.priority} />
-                    <span className="flex-1 truncate text-sm">{t.title}</span>
-                    <span
-                      className={cn(
-                        "text-xs tabular-nums",
-                        overdue ? "text-destructive" : "text-muted-foreground",
-                      )}
-                    >
-                      {format(t.dueDate, "d MMM", { locale: ru })}
-                    </span>
+                  <li key={h.id}>
+                    <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                      <span className="flex min-w-0 items-center gap-2">
+                        {h.icon && <span className="shrink-0">{h.icon}</span>}
+                        <span className="truncate">{h.name}</span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">
+                        {h.weekDone}/7
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, backgroundColor: color }}
+                      />
+                    </div>
                   </li>
                 );
               })}
             </ul>
           )}
         </Panel>
-      </div>
 
-      {/* Goals + Subscriptions */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Panel title="Цели" href="/goals" icon={Target} accent="fuchsia">
           {s.goals.length === 0 ? (
             <Empty text="Активных целей нет. Поставьте первую." />
@@ -288,7 +299,10 @@ export default async function DashboardPage() {
             </ul>
           )}
         </Panel>
+      </div>
 
+      {/* Subscriptions + Finance */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Panel
           title="Ближайшие платежи"
           href="/subscriptions"
@@ -318,10 +332,7 @@ export default async function DashboardPage() {
             </ul>
           )}
         </Panel>
-      </div>
 
-      {/* Finance overview panel */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Panel title="Финансы (этот месяц)" href="/finances" icon={Wallet} accent="emerald">
           {s.financeThisMonth.income === 0 && s.financeThisMonth.expense === 0 ? (
             <Empty text="Нет транзакций за этот месяц." />
@@ -360,8 +371,10 @@ export default async function DashboardPage() {
             </div>
           )}
         </Panel>
+      </div>
 
-        {/* Debt panel — moved from top StatCards */}
+      {/* Debts */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Panel title="Долги" href="/debts" icon={HandCoins} accent="rose">
           {debtCurrencies.length === 0 ? (
             <Empty text="Нет открытых долгов." />

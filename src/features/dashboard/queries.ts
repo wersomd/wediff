@@ -1,16 +1,18 @@
 import "server-only";
-import { addDays, endOfDay, endOfMonth, format, startOfMonth } from "date-fns";
+import { addDays, endOfDay, endOfMonth, format, startOfMonth, startOfWeek } from "date-fns";
 import { DebtStatus, GoalStatus, TaskStatus, TransactionType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAccountsWithBalance } from "@/features/finances/queries";
 import { computeDebtTotals, isOverdue } from "@/features/debts/summary";
 import { getAgenda } from "@/features/agenda/queries";
+import { entryDayKey, todayKey, weekCount } from "@/features/habits/dates";
 
 export async function getDashboardSummary() {
   const now = new Date();
   const endToday = endOfDay(now);
-  const todayKey = format(now, "yyyy-MM-dd");
-  const todayDate = new Date(`${todayKey}T00:00:00.000Z`);
+  const todayDateKey = format(now, "yyyy-MM-dd");
+  const todayDate = new Date(`${todayDateKey}T00:00:00.000Z`);
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const in7 = endOfDay(addDays(now, 7));
 
   const [
@@ -39,10 +41,14 @@ export async function getDashboardSummary() {
     db.task.count({
       where: { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
     }),
-    // Active habits with today's entry (if any) to compute done/total.
+    // Active habits with this week's entries — enough for today's done/total
+    // and the per-habit weekly progress panel.
     db.habit.findMany({
       where: { archived: false },
-      include: { entries: { where: { date: todayDate }, select: { id: true } } },
+      orderBy: { createdAt: "asc" },
+      include: {
+        entries: { where: { date: { gte: weekStart } }, select: { date: true } },
+      },
     }),
     getAccountsWithBalance(),
     db.subscription.findMany({
@@ -141,8 +147,18 @@ export async function getDashboardSummary() {
       openCount: openTaskCount,
     },
     habits: {
-      doneToday: habits.filter((h) => h.entries.length > 0).length,
+      doneToday: habits.filter((h) =>
+        h.entries.some((e) => entryDayKey(e.date) === todayKey()),
+      ).length,
       total: habits.length,
+      list: habits.slice(0, 6).map((h) => ({
+        id: h.id,
+        name: h.name,
+        color: h.color,
+        icon: h.icon,
+        weekDone: weekCount(new Set(h.entries.map((e) => entryDayKey(e.date)))),
+        target: h.target,
+      })),
     },
     balances,
     subscriptions: upcomingSubs.map((s) => ({
