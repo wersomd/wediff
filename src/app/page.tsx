@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { LandingClient } from "./landing-client";
 
 export const metadata: Metadata = {
@@ -8,8 +6,8 @@ export const metadata: Metadata = {
   description: "Финансы, задачи, привычки, цели — всё под контролем.",
 };
 
-export default async function Home() {
-  const session = await auth();
-  if (session) redirect("/dashboard");
+// Root is always the public landing. The "Войти" CTA links to /dashboard;
+// middleware sends logged-in visitors straight in and others to /login.
+export default function Home() {
   return <LandingClient />;
 }

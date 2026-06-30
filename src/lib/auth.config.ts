@@ -16,8 +16,8 @@ export const authConfig = {
       const onLogin = nextUrl.pathname.startsWith("/login");
       const onLanding = nextUrl.pathname === "/";
 
-      // Public landing page at the root. The page itself redirects
-      // logged-in visitors to /dashboard.
+      // Public landing page at the root — shown to everyone, logged in
+      // or not. Its "Войти" CTA links to /dashboard.
       if (onLanding) return true;
 
       if (onLogin) {
