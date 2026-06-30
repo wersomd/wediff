@@ -14,6 +14,11 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const loggedIn = !!auth?.user;
       const onLogin = nextUrl.pathname.startsWith("/login");
+      const onLanding = nextUrl.pathname === "/";
+
+      // Public landing page at the root. The page itself redirects
+      // logged-in visitors to /dashboard.
+      if (onLanding) return true;
 
       if (onLogin) {
         if (loggedIn) return Response.redirect(new URL("/dashboard", nextUrl));
