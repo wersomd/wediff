@@ -95,3 +95,13 @@
     font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   }
 }
+
+@keyframes pulse-bg {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1;   }
+}
+
+@keyframes float {
+  from { transform: translateY(0px);   }
+  to   { transform: translateY(-12px); }
+}
