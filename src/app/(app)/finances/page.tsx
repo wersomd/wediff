@@ -3,7 +3,7 @@ import { FinancesView } from "@/features/finances/components/finances-view";
 import {
   getAccountsWithBalance,
   getBudgetsWithSpend,
-  getCategories,
+  getCategoriesWithCount,
   getTransactions,
 } from "@/features/finances/queries";
 
@@ -13,7 +13,7 @@ export default async function FinancesPage() {
   const [accounts, transactions, categories, budgets] = await Promise.all([
     getAccountsWithBalance(),
     getTransactions(),
-    getCategories(),
+    getCategoriesWithCount(),
     getBudgetsWithSpend(),
   ]);
 
