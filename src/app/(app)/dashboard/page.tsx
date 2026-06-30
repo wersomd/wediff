@@ -11,6 +11,7 @@ import {
   HandCoins,
   Pin,
   Target,
+  TrendingDown,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -23,8 +24,6 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Главная" };
 
-// Each life domain gets one signature accent. The colored left edge of a card
-// is its identity — the eye maps card → domain without reading the label.
 type Accent = "violet" | "amber" | "emerald" | "rose" | "fuchsia" | "sky";
 
 const ACCENT: Record<
@@ -98,7 +97,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Greeting hero — sets time & context before the numbers. */}
+      {/* Greeting hero */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -120,7 +119,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Key numbers — one colored card per domain. */}
+      {/* Key numbers — Долги replaced with Расходы (месяц) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatCard
           href="/tasks"
@@ -150,29 +149,25 @@ export default async function DashboardPage() {
           }
           hint={
             currencies.length > 1
-              ? currencies
-                  .slice(1)
-                  .map(([c, v]) => formatMoney(v, c))
-                  .join(" · ")
+              ? currencies.slice(1).map(([c, v]) => formatMoney(v, c)).join(" · ")
               : "по всем счетам"
           }
         />
         <StatCard
-          href="/debts"
+          href="/finances"
           accent="rose"
-          icon={HandCoins}
-          label="Долги"
+          icon={TrendingDown}
+          label="Расходы (месяц)"
           value={
-            debtCurrencies.length
-              ? formatMoney(debtCurrencies[0][1].net, debtCurrencies[0][0])
+            s.financeThisMonth.expense > 0
+              ? formatMoney(s.financeThisMonth.expense, "KZT")
               : "—"
           }
           hint={
-            s.debts.overdue > 0
-              ? `${s.debts.overdue} просрочено`
-              : "чистый баланс"
+            s.financeThisMonth.income > 0
+              ? `доходы ${formatMoney(s.financeThisMonth.income, "KZT")}`
+              : "нет данных"
           }
-          alert={s.debts.overdue > 0}
         />
         <StatCard
           href="/goals"
@@ -192,7 +187,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Agenda is the centerpiece — the whole upcoming picture in one column. */}
+      {/* Agenda + Tasks */}
       <div className="mt-6 grid gap-5 lg:grid-cols-3">
         <Panel
           title="Повестка"
@@ -267,6 +262,7 @@ export default async function DashboardPage() {
         </Panel>
       </div>
 
+      {/* Goals + Subscriptions */}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Panel title="Цели" href="/goals" icon={Target} accent="fuchsia">
           {s.goals.length === 0 ? (
@@ -324,6 +320,90 @@ export default async function DashboardPage() {
         </Panel>
       </div>
 
+      {/* Finance overview panel */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Panel title="Финансы (этот месяц)" href="/finances" icon={Wallet} accent="emerald">
+          {s.financeThisMonth.income === 0 && s.financeThisMonth.expense === 0 ? (
+            <Empty text="Нет транзакций за этот месяц." />
+          ) : (
+            <div className="space-y-3 pt-1">
+              <FinanceRow
+                label="Доходы"
+                value={s.financeThisMonth.income}
+                total={Math.max(s.financeThisMonth.income, s.financeThisMonth.expense)}
+                color="bg-emerald-500"
+              />
+              <FinanceRow
+                label="Расходы"
+                value={s.financeThisMonth.expense}
+                total={Math.max(s.financeThisMonth.income, s.financeThisMonth.expense)}
+                color="bg-destructive"
+              />
+              <div className="border-t border-border pt-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Сальдо</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      s.financeThisMonth.income - s.financeThisMonth.expense >= 0
+                        ? "text-emerald-500"
+                        : "text-destructive",
+                    )}
+                  >
+                    {formatMoney(
+                      s.financeThisMonth.income - s.financeThisMonth.expense,
+                      "KZT",
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        {/* Debt panel — moved from top StatCards */}
+        <Panel title="Долги" href="/debts" icon={HandCoins} accent="rose">
+          {debtCurrencies.length === 0 ? (
+            <Empty text="Нет открытых долгов." />
+          ) : (
+            <div className="space-y-3 pt-1">
+              {debtCurrencies.map(([currency, totals]) => (
+                <div key={currency} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Мне должны</span>
+                    <span className="tabular-nums text-emerald-500">
+                      {formatMoney(totals.owedToMe, currency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Я должен</span>
+                    <span className="tabular-nums text-destructive">
+                      {formatMoney(totals.iOwe, currency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-1.5 text-sm font-medium">
+                    <span>Чистый баланс</span>
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        totals.net >= 0 ? "text-emerald-500" : "text-destructive",
+                      )}
+                    >
+                      {formatMoney(totals.net, currency)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {s.debts.overdue > 0 && (
+                <p className="text-xs font-medium text-destructive">
+                  {s.debts.overdue} просрочено
+                </p>
+              )}
+            </div>
+          )}
+        </Panel>
+      </div>
+
       {s.pinnedNotes > 0 && (
         <Link
           href="/notes"
@@ -337,14 +417,33 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({
-  href,
-  accent,
-  icon: Icon,
+function FinanceRow({
   label,
   value,
-  hint,
-  alert,
+  total,
+  color,
+}: {
+  label: string;
+  value: number;
+  total: number;
+  color: string;
+}) {
+  const pct = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="tabular-nums font-medium">{formatMoney(value, "KZT")}</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  href, accent, icon: Icon, label, value, hint, alert,
 }: {
   href: string;
   accent: Accent;
@@ -360,28 +459,17 @@ function StatCard({
       href={href}
       className={cn(
         "rounded-xl border border-border border-l-2 bg-card p-4 transition-colors",
-        a.bar,
-        a.ring,
+        a.bar, a.ring,
       )}
     >
       <div className="flex items-center justify-between">
-        <span
-          className={cn(
-            "flex size-8 items-center justify-center rounded-lg",
-            a.chip,
-          )}
-        >
+        <span className={cn("flex size-8 items-center justify-center rounded-lg", a.chip)}>
           <Icon className="size-4" />
         </span>
       </div>
       <p className="mt-3 truncate text-2xl font-semibold tabular-nums">{value}</p>
       <p className="mt-0.5 truncate text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-1 truncate text-xs",
-          alert ? "font-medium text-destructive" : "text-muted-foreground/70",
-        )}
-      >
+      <p className={cn("mt-1 truncate text-xs", alert ? "font-medium text-destructive" : "text-muted-foreground/70")}>
         {hint}
       </p>
     </Link>
@@ -389,12 +477,7 @@ function StatCard({
 }
 
 function Panel({
-  title,
-  href,
-  icon: Icon,
-  accent,
-  className,
-  children,
+  title, href, icon: Icon, accent, className, children,
 }: {
   title: string;
   href: string;
@@ -408,12 +491,7 @@ function Panel({
     <div className={cn("rounded-xl border border-border bg-card p-5", className)}>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-medium">
-          <span
-            className={cn(
-              "flex size-6 items-center justify-center rounded-md",
-              a.chip,
-            )}
-          >
+          <span className={cn("flex size-6 items-center justify-center rounded-md", a.chip)}>
             <Icon className="size-3.5" />
           </span>
           {title}

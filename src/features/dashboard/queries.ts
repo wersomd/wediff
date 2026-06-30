@@ -1,6 +1,6 @@
 import "server-only";
-import { addDays, endOfDay, format } from "date-fns";
-import { DebtStatus, GoalStatus, TaskStatus } from "@prisma/client";
+import { addDays, endOfDay, endOfMonth, format, startOfMonth } from "date-fns";
+import { DebtStatus, GoalStatus, TaskStatus, TransactionType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAccountsWithBalance } from "@/features/finances/queries";
 import { computeDebtTotals, isOverdue } from "@/features/debts/summary";
@@ -24,6 +24,7 @@ export async function getDashboardSummary() {
     activeGoals,
     todayEntry,
     agenda,
+    monthlyTotals,
   ] = await Promise.all([
     // Tasks due today or overdue, not finished.
     db.task.findMany({
@@ -73,6 +74,15 @@ export async function getDashboardSummary() {
       select: { mood: true },
     }),
     getAgenda(),
+    // This month income + expense totals
+    db.transaction.groupBy({
+      by: ["type"],
+      where: {
+        date: { gte: startOfMonth(now), lte: endOfMonth(now) },
+        category: { name: { not: "Перевод" } },
+      },
+      _sum: { amount: true },
+    }),
   ]);
 
   // Open debts → per-currency net balance + overdue count.
@@ -114,6 +124,11 @@ export async function getDashboardSummary() {
     return { id: g.id, title: g.title, progress };
   });
 
+  const monthIncome =
+    monthlyTotals.find((r) => r.type === TransactionType.INCOME)?._sum.amount?.toNumber() ?? 0;
+  const monthExpense =
+    monthlyTotals.find((r) => r.type === TransactionType.EXPENSE)?._sum.amount?.toNumber() ?? 0;
+
   return {
     tasks: {
       due: dueTasks.map((t) => ({
@@ -147,6 +162,7 @@ export async function getDashboardSummary() {
     goals,
     todayMood: todayEntry?.mood ?? null,
     agenda: agenda.slice(0, 7),
+    financeThisMonth: { income: monthIncome, expense: monthExpense },
   };
 }
 
