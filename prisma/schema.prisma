@@ -66,6 +66,8 @@ model Project {
 enum TaskStatus {
   TODO
   IN_PROGRESS
+  REVIEW
+  ON_HOLD
   DONE
   CANCELLED
 }
