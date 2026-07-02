@@ -7,6 +7,8 @@ import { ru } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   CalendarClock,
+  ChevronDown,
+  ChevronRight,
   HandCoins,
   MoreHorizontal,
   Plus,
@@ -46,12 +48,34 @@ export function DebtsView({
   const [, start] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [payDebt, setPayDebt] = useState<DebtView | null>(null);
+  const [showSettled, setShowSettled] = useState(false);
 
   const allDebts = useMemo(
     () => counterparties.flatMap((c) => c.debts),
     [counterparties],
   );
   const totals = useMemo(() => computeDebtTotals(allDebts), [allDebts]);
+
+  // Active debts drive the main list; settled ones are tucked into a
+  // collapsible section so the page stays clean without deleting history.
+  const activeCounterparties = useMemo(
+    () =>
+      counterparties
+        .map((c) => ({ ...c, debts: c.debts.filter((d) => d.status !== "PAID") }))
+        .filter((c) => c.debts.length > 0),
+    [counterparties],
+  );
+  const settledCounterparties = useMemo(
+    () =>
+      counterparties
+        .map((c) => ({ ...c, debts: c.debts.filter((d) => d.status === "PAID") }))
+        .filter((c) => c.debts.length > 0),
+    [counterparties],
+  );
+  const settledCount = useMemo(
+    () => settledCounterparties.reduce((n, c) => n + c.debts.length, 0),
+    [settledCounterparties],
+  );
 
   function remove(debt: DebtView, counterpartyName: string) {
     if (
@@ -120,14 +144,50 @@ export function DebtsView({
         />
       ) : (
         <div className="space-y-4">
-          {counterparties.map((c) => (
-            <CounterpartyCard
-              key={c.id}
-              counterparty={c}
-              onPay={setPayDebt}
-              onDelete={remove}
-            />
-          ))}
+          {activeCounterparties.length > 0 ? (
+            activeCounterparties.map((c) => (
+              <CounterpartyCard
+                key={c.id}
+                counterparty={c}
+                onPay={setPayDebt}
+                onDelete={remove}
+              />
+            ))
+          ) : (
+            <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+              Активных долгов нет 🎉
+            </p>
+          )}
+
+          {settledCount > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowSettled((v) => !v)}
+                className="flex w-full items-center gap-1.5 rounded-md px-1 py-2 text-sm font-medium text-muted-foreground outline-none hover:text-foreground"
+                aria-expanded={showSettled}
+              >
+                {showSettled ? (
+                  <ChevronDown className="size-4" />
+                ) : (
+                  <ChevronRight className="size-4" />
+                )}
+                Погашенные ({settledCount})
+              </button>
+              {showSettled && (
+                <div className="mt-3 space-y-4">
+                  {settledCounterparties.map((c) => (
+                    <CounterpartyCard
+                      key={c.id}
+                      counterparty={c}
+                      onPay={setPayDebt}
+                      onDelete={remove}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
