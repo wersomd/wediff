@@ -9,7 +9,11 @@ import {
 } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { debtCreateSchema, paymentCreateSchema } from "./schema";
+import {
+  debtCreateSchema,
+  debtUpdateSchema,
+  paymentCreateSchema,
+} from "./schema";
 import { DEBT_CATEGORY } from "./constants";
 
 async function requireAuth() {
@@ -118,6 +122,41 @@ export async function createDebt(input: unknown): Promise<ActionResult> {
         disbursementTransactionId: transaction.id,
       },
     });
+  });
+  revalidateDebts();
+  return { ok: true };
+}
+
+// Edits a debt's dates. The borrow date is kept in sync with the disbursement
+// transaction so the finance books show the same date as the debt.
+export async function updateDebt(input: unknown): Promise<ActionResult> {
+  await requireAuth();
+  const parsed = debtUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
+  }
+  const { id, borrowedOn, dueDate } = parsed.data;
+
+  const debt = await db.debt.findUnique({
+    where: { id },
+    select: { disbursementTransactionId: true },
+  });
+  if (!debt) return { error: "Долг не найден" };
+
+  await db.$transaction(async (tx) => {
+    await tx.debt.update({
+      where: { id },
+      data: {
+        borrowedOn: toDate(borrowedOn),
+        dueDate: dueDate ? toDate(dueDate) : null,
+      },
+    });
+    if (debt.disbursementTransactionId) {
+      await tx.transaction.update({
+        where: { id: debt.disbursementTransactionId },
+        data: { date: toDate(borrowedOn) },
+      });
+    }
   });
   revalidateDebts();
   return { ok: true };

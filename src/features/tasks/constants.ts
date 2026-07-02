@@ -4,14 +4,18 @@ import { TaskStatus, TaskPriority } from "@prisma/client";
 export const TASK_STATUS_ORDER: TaskStatus[] = [
   TaskStatus.TODO,
   TaskStatus.IN_PROGRESS,
+  TaskStatus.REVIEW,
+  TaskStatus.ON_HOLD,
   TaskStatus.DONE,
   TaskStatus.CANCELLED,
 ];
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: "К выполнению",
+  TODO: "План",
   IN_PROGRESS: "В работе",
-  DONE: "Готово",
+  REVIEW: "Ревью",
+  ON_HOLD: "На стопе",
+  DONE: "Завершено",
   CANCELLED: "Отменено",
 };
 

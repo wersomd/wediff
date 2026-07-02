@@ -16,6 +16,12 @@ export const debtCreateSchema = z.object({
   description: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
+export const debtUpdateSchema = z.object({
+  id: z.string().min(1),
+  borrowedOn: dateStr,
+  dueDate: dateStr.optional().or(z.literal("")),
+});
+
 export const paymentCreateSchema = z.object({
   debtId: z.string().min(1),
   amount: z.coerce.number().positive("Сумма должна быть больше нуля"),
@@ -25,4 +31,5 @@ export const paymentCreateSchema = z.object({
 });
 
 export type DebtCreateInput = z.input<typeof debtCreateSchema>;
+export type DebtUpdateInput = z.input<typeof debtUpdateSchema>;
 export type PaymentCreateInput = z.input<typeof paymentCreateSchema>;

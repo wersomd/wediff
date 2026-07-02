@@ -11,6 +11,7 @@ import {
   ChevronRight,
   HandCoins,
   MoreHorizontal,
+  Pencil,
   Plus,
   Trash2,
   Wallet,
@@ -29,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { formatMoney } from "@/features/finances/money";
 import type { AccountWithBalance } from "@/features/finances/queries";
 import { DebtDialog } from "./debt-dialog";
+import { DebtDatesDialog } from "./debt-dates-dialog";
 import { PaymentDialog } from "./payment-dialog";
 import { deleteDebt } from "../actions";
 import { DEBT_DIRECTION_LABELS } from "../constants";
@@ -48,6 +50,7 @@ export function DebtsView({
   const [, start] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [payDebt, setPayDebt] = useState<DebtView | null>(null);
+  const [editDatesDebt, setEditDatesDebt] = useState<DebtView | null>(null);
   const [showSettled, setShowSettled] = useState(false);
 
   const allDebts = useMemo(
@@ -150,6 +153,7 @@ export function DebtsView({
                 key={c.id}
                 counterparty={c}
                 onPay={setPayDebt}
+                onEditDates={setEditDatesDebt}
                 onDelete={remove}
               />
             ))
@@ -181,6 +185,7 @@ export function DebtsView({
                       key={c.id}
                       counterparty={c}
                       onPay={setPayDebt}
+                      onEditDates={setEditDatesDebt}
                       onDelete={remove}
                     />
                   ))}
@@ -202,6 +207,10 @@ export function DebtsView({
         accounts={accounts}
         onOpenChange={(open) => !open && setPayDebt(null)}
       />
+      <DebtDatesDialog
+        debt={editDatesDebt}
+        onOpenChange={(open) => !open && setEditDatesDebt(null)}
+      />
     </>
   );
 }
@@ -209,10 +218,12 @@ export function DebtsView({
 function CounterpartyCard({
   counterparty,
   onPay,
+  onEditDates,
   onDelete,
 }: {
   counterparty: CounterpartyView;
   onPay: (debt: DebtView) => void;
+  onEditDates: (debt: DebtView) => void;
   onDelete: (debt: DebtView, counterpartyName: string) => void;
 }) {
   const totals = computeDebtTotals(counterparty.debts);
@@ -244,6 +255,7 @@ function CounterpartyCard({
             debt={d}
             counterpartyName={counterparty.name}
             onPay={onPay}
+            onEditDates={onEditDates}
             onDelete={onDelete}
           />
         ))}
@@ -256,11 +268,13 @@ function DebtRow({
   debt,
   counterpartyName,
   onPay,
+  onEditDates,
   onDelete,
 }: {
   debt: DebtView;
   counterpartyName: string;
   onPay: (debt: DebtView) => void;
+  onEditDates: (debt: DebtView) => void;
   onDelete: (debt: DebtView, counterpartyName: string) => void;
 }) {
   const settled = debt.status === "PAID";
@@ -327,6 +341,13 @@ function DebtRow({
               >
                 <Wallet className="size-4" />
                 {settled ? "История" : "Погашение"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => onEditDates(debt)}
+                className="cursor-pointer"
+              >
+                <Pencil className="size-4" />
+                Изменить даты
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => onDelete(debt, counterpartyName)}

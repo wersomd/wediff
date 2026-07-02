@@ -24,7 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createTask, updateTask } from "../actions";
+import { Trash2 } from "lucide-react";
+import { createTask, deleteTask, updateTask } from "../actions";
 import {
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_ORDER,
@@ -72,6 +73,21 @@ export function TaskDialog({
       lockedProjectId ?? task?.projectId ?? NO_PROJECT,
     );
   }, [open, task, defaultStatus, lockedProjectId]);
+
+  function remove() {
+    if (!task) return;
+    if (!window.confirm(`Удалить задачу «${task.title}»?`)) return;
+    start(async () => {
+      const res = await deleteTask(task.id);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Задача удалена");
+      onOpenChange(false);
+      router.refresh();
+    });
+  }
 
   function submit() {
     start(async () => {
@@ -197,6 +213,17 @@ export function TaskDialog({
         </div>
 
         <DialogFooter>
+          {isEdit && (
+            <Button
+              variant="ghost"
+              onClick={remove}
+              disabled={pending}
+              className="mr-auto text-destructive hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+              Удалить
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
             Отмена
           </Button>
