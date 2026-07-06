@@ -195,6 +195,16 @@ enum DebtStatus {
   PAID // remaining reached 0; set automatically
 }
 
+enum DebtKind {
+  SIMPLE // one-shot loan; may or may not touch an account balance
+  INSTALLMENT // halal 0% installment plan with a monthly schedule
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+}
+
 model Counterparty {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -208,20 +218,44 @@ model Debt {
   counterpartyId String
   counterparty   Counterparty  @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
   direction      DebtDirection
+  kind           DebtKind      @default(SIMPLE)
   principal      Decimal       @db.Decimal(14, 2)
   currency       String        @default("KZT")
   description    String?
   borrowedOn     DateTime
   dueDate        DateTime?
   status         DebtStatus    @default(OPEN)
-  // Transaction created when the loan was disbursed (nullable: loan can predate the app).
+  // Transaction created when the loan was disbursed (nullable: loan can predate the
+  // app, or the debt is recorded without touching any account balance).
   disbursementTransactionId String?       @unique
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   payments       DebtPayment[]
+  installments   DebtInstallment[]
 
   @@index([counterpartyId])
   @@index([status])
+  @@index([dueDate])
+}
+
+// One scheduled month of an INSTALLMENT debt. Marking it paid creates a
+// repayment Transaction and a DebtPayment (so paid/remaining reuse the same
+// sum-of-payments math as simple debts).
+model DebtInstallment {
+  id        String            @id @default(cuid())
+  debtId    String
+  debt      Debt              @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  seq       Int
+  dueDate   DateTime
+  amount    Decimal           @db.Decimal(14, 2)
+  status    InstallmentStatus @default(PENDING)
+  paidOn    DateTime?
+  paymentId String?           @unique
+  payment   DebtPayment?      @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdAt DateTime          @default(now())
+
+  @@unique([debtId, seq])
+  @@index([debtId])
   @@index([dueDate])
 }
 
@@ -235,6 +269,7 @@ model DebtPayment {
   // Transaction created for this repayment (nullable: can be recorded without an account).
   transactionId String?  @unique
   createdAt     DateTime @default(now())
+  installment   DebtInstallment?
 
   @@index([debtId])
 }

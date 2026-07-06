@@ -1,4 +1,4 @@
-import { DebtDirection, DebtStatus } from "@prisma/client";
+import { DebtDirection, DebtStatus, InstallmentStatus } from "@prisma/client";
 
 // Per-currency net totals for a flat list of debts. KZT and USD never sum
 // together — each currency is reported on its own line.
@@ -39,4 +39,27 @@ export function isOverdue(
     debt.dueDate !== null &&
     debt.dueDate.getTime() < now.getTime()
   );
+}
+
+type InstallmentLike = { seq: number; dueDate: Date; status: InstallmentStatus };
+
+// The earliest month still awaiting payment (drives the "next payment" line and
+// overdue badge for installment debts). Null once everything is paid.
+export function nextInstallment<T extends InstallmentLike>(
+  installments: T[],
+): T | null {
+  return (
+    installments
+      .filter((i) => i.status === InstallmentStatus.PENDING)
+      .sort((a, b) => a.seq - b.seq)[0] ?? null
+  );
+}
+
+// An installment plan is overdue when its next pending month's due date passed.
+export function installmentOverdue(
+  installments: InstallmentLike[],
+  now: Date = new Date(),
+): boolean {
+  const next = nextInstallment(installments);
+  return next !== null && next.dueDate.getTime() < now.getTime();
 }

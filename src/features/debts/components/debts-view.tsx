@@ -34,7 +34,7 @@ import { DebtDatesDialog } from "./debt-dates-dialog";
 import { PaymentDialog } from "./payment-dialog";
 import { deleteDebt } from "../actions";
 import { DEBT_DIRECTION_LABELS } from "../constants";
-import { computeDebtTotals } from "../summary";
+import { computeDebtTotals, nextInstallment } from "../summary";
 import type { CounterpartyView, DebtView } from "../queries";
 
 export function DebtsView({
@@ -278,8 +278,15 @@ function DebtRow({
   onDelete: (debt: DebtView, counterpartyName: string) => void;
 }) {
   const settled = debt.status === "PAID";
-  const days = debt.dueDate
-    ? differenceInCalendarDays(debt.dueDate, new Date())
+  const isInstallment = debt.kind === "INSTALLMENT";
+  const next = isInstallment ? nextInstallment(debt.installments) : null;
+  const paidCount = debt.installments.filter(
+    (i) => i.status === "PAID",
+  ).length;
+  // Installments track their own schedule; a plain debt uses its single dueDate.
+  const dueDate = isInstallment ? (next?.dueDate ?? null) : debt.dueDate;
+  const days = dueDate
+    ? differenceInCalendarDays(dueDate, new Date())
     : null;
   const overdue = !settled && days !== null && days < 0;
   const progress =
@@ -295,6 +302,11 @@ function DebtRow({
             <Badge variant="outline" className="text-[10px] uppercase">
               {DEBT_DIRECTION_LABELS[debt.direction]}
             </Badge>
+            {isInstallment && (
+              <Badge className="bg-primary/15 text-primary text-[10px] uppercase">
+                Рассрочка
+              </Badge>
+            )}
             {debt.description && (
               <span className="truncate text-sm text-muted-foreground">
                 {debt.description}
@@ -310,6 +322,14 @@ function DebtRow({
               </span>
             )}
           </p>
+          {isInstallment && !settled && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Оплачено {paidCount} из {debt.installments.length} мес
+              {next
+                ? ` · след. платёж ${format(next.dueDate, "d MMM", { locale: ru })}`
+                : ""}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -324,7 +344,7 @@ function DebtRow({
           ) : days !== null ? (
             <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
               <CalendarClock className="size-3.5" />
-              {format(debt.dueDate as Date, "d MMM", { locale: ru })}
+              {format(dueDate as Date, "d MMM", { locale: ru })}
             </span>
           ) : null}
           <DropdownMenu>
@@ -340,7 +360,7 @@ function DebtRow({
                 className="cursor-pointer"
               >
                 <Wallet className="size-4" />
-                {settled ? "История" : "Погашение"}
+                {isInstallment ? "График" : settled ? "История" : "Погашение"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => onEditDates(debt)}
