@@ -2,7 +2,8 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarClock } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2 } from "lucide-react";
+import { TaskStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { PriorityDot } from "./priority-badge";
 import { formatDue } from "../format";
@@ -26,6 +27,9 @@ export function TaskCard({
     isDragging,
   } = useSortable({ id: task.id, data: { status: task.status } });
 
+  const done = task.status === TaskStatus.DONE;
+  const cancelled = task.status === TaskStatus.CANCELLED;
+  const finished = done || cancelled;
   const due = task.dueDate ? formatDue(task.dueDate) : null;
 
   return (
@@ -38,20 +42,41 @@ export function TaskCard({
       className={cn(
         "group cursor-grab touch-none rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-colors hover:border-foreground/20 active:cursor-grabbing",
         isDragging && "opacity-40",
+        finished && "bg-muted/30",
         overlay && "cursor-grabbing shadow-lg ring-1 ring-border",
       )}
     >
       <div className="flex items-start gap-2">
-        <PriorityDot priority={task.priority} className="mt-1.5" />
-        <p className="flex-1 text-sm leading-snug">{task.title}</p>
+        {done ? (
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+        ) : cancelled ? (
+          <Ban className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <PriorityDot priority={task.priority} className="mt-1.5" />
+        )}
+        <p
+          className={cn(
+            "flex-1 text-sm leading-snug",
+            finished && "text-muted-foreground line-through",
+          )}
+        >
+          {task.title}
+        </p>
       </div>
       {(due || task.project) && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 pl-4">
+        <div
+          className={cn(
+            "mt-2 flex flex-wrap items-center gap-2",
+            finished ? "pl-6" : "pl-4",
+          )}
+        >
           {due && (
             <span
               className={cn(
                 "inline-flex items-center gap-1 text-xs",
-                due.overdue ? "text-destructive" : "text-muted-foreground",
+                due.overdue && !finished
+                  ? "text-destructive"
+                  : "text-muted-foreground",
               )}
             >
               <CalendarClock className="size-3" />

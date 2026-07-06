@@ -68,7 +68,14 @@ export function TaskDialog({
     setDescription(task?.description ?? "");
     setStatus(task?.status ?? defaultStatus);
     setPriority(task?.priority ?? TaskPriority.MEDIUM);
-    setDueDate(task?.dueDate ? format(task.dueDate, "yyyy-MM-dd") : "");
+    // New tasks default their due date to today (editable); edits keep theirs.
+    setDueDate(
+      task
+        ? task.dueDate
+          ? format(task.dueDate, "yyyy-MM-dd")
+          : ""
+        : format(new Date(), "yyyy-MM-dd"),
+    );
     setProjectId(
       lockedProjectId ?? task?.projectId ?? NO_PROJECT,
     );

@@ -45,7 +45,9 @@ export function TaskRow({
         <span
           className={cn(
             "hidden items-center gap-1 text-xs sm:inline-flex",
-            due.overdue && !done ? "text-destructive" : "text-muted-foreground",
+            due.overdue && !done && !cancelled
+              ? "text-destructive"
+              : "text-muted-foreground",
           )}
         >
           <CalendarClock className="size-3" />
