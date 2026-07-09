@@ -474,3 +474,23 @@ model Budget {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ARCHIVED
+}
+
+// Заявки, поступающие с внешних сайтов (лендинг wersomd.github.io и т.п.).
+model Lead {
+  id        String     @id @default(cuid())
+  name      String
+  contact   String // телефон / мессенджер / email — как ввёл клиент
+  message   String     @default("")
+  source    String     @default("wersomd.github.io")
+  status    LeadStatus @default(NEW)
+  createdAt DateTime   @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
