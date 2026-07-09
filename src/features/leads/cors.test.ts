@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { allowedOrigin, isOriginAllowed, corsHeaders } from "./cors";
 
 const ORIGIN = "https://wersomd.github.io";
