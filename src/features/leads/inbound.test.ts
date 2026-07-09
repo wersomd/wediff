@@ -91,4 +91,49 @@ describe("handleInboundLead", () => {
     expect(r.status).toBe(200);
     expect(created).toHaveLength(1);
   });
+
+  it("тайминг-ловушка: слишком быстрый сабмит не создаёт лид, но 200", async () => {
+    const { created, deps } = makeDeps();
+    const r = await handleInboundLead(
+      { name: "Bot", contact: "x", elapsed: 300 },
+      OK_CTX,
+      deps,
+    );
+    expect(r.status).toBe(200);
+    expect(created).toHaveLength(0);
+  });
+
+  it("нормальное время заполнения — лид создаётся", async () => {
+    const { created, deps } = makeDeps();
+    const r = await handleInboundLead(
+      { name: "Иван", contact: "x", elapsed: 8000 },
+      OK_CTX,
+      deps,
+    );
+    expect(r.status).toBe(200);
+    expect(created).toHaveLength(1);
+  });
+
+  it("превышение rate-limit → 429, лид не создаётся", async () => {
+    const { created, deps } = makeDeps();
+    const r = await handleInboundLead(
+      { name: "Иван", contact: "x" },
+      { origin: null, token: null, ip: "1.2.3.4" },
+      { ...deps, checkRateLimit: async () => false },
+    );
+    expect(r.status).toBe(429);
+    expect(created).toHaveLength(0);
+  });
+
+  it("в пределах лимита — лид создаётся, IP сохраняется", async () => {
+    const { created, deps } = makeDeps();
+    const r = await handleInboundLead(
+      { name: "Иван", contact: "x" },
+      { origin: null, token: null, ip: "1.2.3.4" },
+      { ...deps, checkRateLimit: async () => true },
+    );
+    expect(r.status).toBe(200);
+    expect(created).toHaveLength(1);
+    expect(created[0].ip).toBe("1.2.3.4");
+  });
 });

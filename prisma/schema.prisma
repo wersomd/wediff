@@ -488,9 +488,20 @@ model Lead {
   contact   String // телефон / мессенджер / email — как ввёл клиент
   message   String     @default("")
   source    String     @default("wersomd.github.io")
+  ip        String? // IP отправителя (x-forwarded-for) — для видимости/банов
   status    LeadStatus @default(NEW)
   createdAt DateTime   @default(now())
 
   @@index([status])
   @@index([createdAt])
+}
+
+// Fixed-window счётчик rate-limit для публичного приёма заявок.
+// key = "lead:<ip>:<bucket>"; строки протухают и подчищаются опортунистически.
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
