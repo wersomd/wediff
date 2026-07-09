@@ -8,7 +8,4 @@ export const leadInboundSchema = z.object({
   website: z.string().optional().default(""), // honeypot: люди оставляют пустым
 });
 
-export type LeadInboundInput = z.input<typeof leadInboundSchema>;
-export type LeadInboundData = z.output<typeof leadInboundSchema>;
-
 export const leadStatusSchema = z.enum(["NEW", "CONTACTED", "ARCHIVED"]);

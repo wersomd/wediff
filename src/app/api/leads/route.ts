@@ -4,6 +4,7 @@ import { handleInboundLead, type LeadPayload } from "@/features/leads/inbound";
 import { notifyNewLead } from "@/features/leads/notify";
 import { allowedOrigin, corsHeaders } from "@/features/leads/cors";
 
+// Prisma + node fetch (Telegram) require the Node.js runtime, not Edge.
 export const runtime = "nodejs";
 
 export async function OPTIONS() {
@@ -23,16 +24,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers });
   }
 
-  const result = await handleInboundLead(
-    body,
-    { origin: req.headers.get("origin"), token: req.headers.get("x-lead-token") },
-    {
-      createLead: async (data: LeadPayload) => {
-        await db.lead.create({ data });
+  try {
+    const result = await handleInboundLead(
+      body,
+      { origin: req.headers.get("origin"), token: req.headers.get("x-lead-token") },
+      {
+        createLead: async (data: LeadPayload) => {
+          await db.lead.create({ data });
+        },
+        notify: notifyNewLead,
       },
-      notify: notifyNewLead,
-    },
-  );
-
-  return NextResponse.json(result.body, { status: result.status, headers });
+    );
+    return NextResponse.json(result.body, { status: result.status, headers });
+  } catch (err) {
+    console.error("POST /api/leads failed:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500, headers });
+  }
 }
