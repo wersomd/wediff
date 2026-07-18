@@ -10,6 +10,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -61,6 +62,37 @@ export function Board({
     const status = columnOf(id);
     if (!status) return;
     setActiveTask(columns[status].find((t) => t.id === id) ?? null);
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const sourceCol = columnOf(activeId);
+    const targetCol = columnOf(overId);
+    if (!sourceCol || !targetCol || sourceCol === targetCol) return;
+
+    // Live-move the dragged card into the hovered column so it visually
+    // tracks the pointer during the drag; handleDragEnd still finalizes the
+    // exact order and persists the move on drop.
+    const moved = columns[sourceCol].find((t) => t.id === activeId);
+    if (!moved) return;
+
+    const sourceItems = columns[sourceCol].filter((t) => t.id !== activeId);
+    const targetItems = [
+      ...columns[targetCol],
+      { ...moved, status: targetCol },
+    ];
+
+    onColumnsChange({
+      ...columns,
+      [sourceCol]: sourceItems,
+      [targetCol]: targetItems,
+    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -120,6 +152,7 @@ export function Board({
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTask(null)}
     >
