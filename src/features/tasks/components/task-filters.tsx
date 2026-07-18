@@ -9,6 +9,10 @@ import {
 } from "@/components/ui/select";
 import {
   ALL,
+  CREATED_FILTER_LABELS,
+  CREATED_FILTER_ORDER,
+  DUE_FILTER_LABELS,
+  DUE_FILTER_ORDER,
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_ORDER,
   TASK_STATUS_LABELS,
@@ -82,6 +86,40 @@ export function TaskFilters({
           </SelectContent>
         </Select>
       )}
+
+      <Select
+        value={filters.due}
+        onValueChange={(v) => onChange({ ...filters, due: v })}
+      >
+        <SelectTrigger className="h-9 w-[160px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>Все сроки</SelectItem>
+          {DUE_FILTER_ORDER.map((d) => (
+            <SelectItem key={d} value={d}>
+              {DUE_FILTER_LABELS[d]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.created}
+        onValueChange={(v) => onChange({ ...filters, created: v })}
+      >
+        <SelectTrigger className="h-9 w-[160px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>Создано: всё время</SelectItem>
+          {CREATED_FILTER_ORDER.map((c) => (
+            <SelectItem key={c} value={c}>
+              Создано: {CREATED_FILTER_LABELS[c].toLowerCase()}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

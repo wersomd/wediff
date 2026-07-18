@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
+import { differenceInCalendarDays, startOfDay, subDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Board, type Columns } from "./board";
 import { TaskList } from "./task-list";
@@ -19,7 +20,33 @@ const EMPTY_FILTERS: TaskFiltersState = {
   status: ALL,
   priority: ALL,
   projectId: ALL,
+  due: ALL,
+  created: ALL,
 };
+
+// Due-date bucket check for the "due" filter select.
+function matchesDue(task: TaskWithProject, due: string, now: Date): boolean {
+  if (due === ALL) return true;
+  if (due === "NONE") return task.dueDate === null;
+  if (!task.dueDate) return false;
+  const days = differenceInCalendarDays(task.dueDate, now);
+  if (due === "OVERDUE") return days < 0;
+  if (due === "TODAY") return days === 0;
+  if (due === "WEEK") return days >= 0 && days <= 7;
+  return true;
+}
+
+// Created-date bucket check for the "created" filter select.
+function matchesCreated(task: TaskWithProject, created: string, now: Date): boolean {
+  if (created === ALL) return true;
+  const since =
+    created === "TODAY"
+      ? startOfDay(now)
+      : created === "WEEK"
+        ? subDays(now, 7)
+        : subDays(now, 30); // "MONTH"
+  return task.createdAt.getTime() >= since.getTime();
+}
 
 function groupByStatus(tasks: TaskWithProject[]): Columns {
   const columns = {} as Columns;
@@ -59,21 +86,22 @@ export function TasksView({
     [columns],
   );
 
-  const filtered = useMemo(
-    () =>
-      flatTasks.filter((t) => {
-        if (filters.status !== ALL && t.status !== filters.status) return false;
-        if (filters.priority !== ALL && t.priority !== filters.priority)
-          return false;
-        if (
-          filters.projectId !== ALL &&
-          (t.projectId ?? "") !== filters.projectId
-        )
-          return false;
-        return true;
-      }),
-    [flatTasks, filters],
-  );
+  const filtered = useMemo(() => {
+    const now = new Date();
+    return flatTasks.filter((t) => {
+      if (filters.status !== ALL && t.status !== filters.status) return false;
+      if (filters.priority !== ALL && t.priority !== filters.priority)
+        return false;
+      if (
+        filters.projectId !== ALL &&
+        (t.projectId ?? "") !== filters.projectId
+      )
+        return false;
+      if (!matchesDue(t, filters.due, now)) return false;
+      if (!matchesCreated(t, filters.created, now)) return false;
+      return true;
+    });
+  }, [flatTasks, filters]);
 
   function openCreate() {
     setEditing(null);

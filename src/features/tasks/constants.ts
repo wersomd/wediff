@@ -93,8 +93,29 @@ export const STATUS_ACCENT: Record<
 // Sentinel for "no filter" in the list view's selects.
 export const ALL = "ALL";
 
+export const DUE_FILTER_ORDER = ["OVERDUE", "TODAY", "WEEK", "NONE"] as const;
+export type DueFilter = (typeof DUE_FILTER_ORDER)[number];
+
+export const DUE_FILTER_LABELS: Record<DueFilter, string> = {
+  OVERDUE: "Просрочено",
+  TODAY: "Сегодня",
+  WEEK: "На этой неделе",
+  NONE: "Без срока",
+};
+
+export const CREATED_FILTER_ORDER = ["TODAY", "WEEK", "MONTH"] as const;
+export type CreatedFilter = (typeof CREATED_FILTER_ORDER)[number];
+
+export const CREATED_FILTER_LABELS: Record<CreatedFilter, string> = {
+  TODAY: "Сегодня",
+  WEEK: "За неделю",
+  MONTH: "За месяц",
+};
+
 export type TaskFiltersState = {
   status: string;
   priority: string;
   projectId: string;
+  due: string;
+  created: string;
 };
