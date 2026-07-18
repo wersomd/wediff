@@ -7,10 +7,12 @@ import {
   KeyboardSensor,
   PointerSensor,
   closestCorners,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -21,6 +23,24 @@ import { TASK_STATUS_ORDER } from "../constants";
 import type { TaskWithProject } from "../queries";
 
 export type Columns = Record<TaskStatus, TaskWithProject[]>;
+
+// closestCorners compares corner distances across every droppable on the
+// board, including ones nowhere near the pointer — for an empty column,
+// the only candidate is the column's own (very tall) container, and its
+// far corners can lose that comparison to compact cards elsewhere, so
+// `over` never resolves to the empty column. pointerWithin fixes this by
+// only considering droppables the pointer is actually inside; the other
+// two are fallbacks for when the pointer briefly clears every rect (e.g.
+// over a column gap) between measurements.
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+
+  const intersections = rectIntersection(args);
+  if (intersections.length > 0) return intersections;
+
+  return closestCorners(args);
+};
 
 export function Board({
   columns,
@@ -62,37 +82,6 @@ export function Board({
     const status = columnOf(id);
     if (!status) return;
     setActiveTask(columns[status].find((t) => t.id === id) ?? null);
-  }
-
-  function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = String(active.id);
-    const overId = String(over.id);
-    if (activeId === overId) return;
-
-    const sourceCol = columnOf(activeId);
-    const targetCol = columnOf(overId);
-    if (!sourceCol || !targetCol || sourceCol === targetCol) return;
-
-    // Live-move the dragged card into the hovered column so it visually
-    // tracks the pointer during the drag; handleDragEnd still finalizes the
-    // exact order and persists the move on drop.
-    const moved = columns[sourceCol].find((t) => t.id === activeId);
-    if (!moved) return;
-
-    const sourceItems = columns[sourceCol].filter((t) => t.id !== activeId);
-    const targetItems = [
-      ...columns[targetCol],
-      { ...moved, status: targetCol },
-    ];
-
-    onColumnsChange({
-      ...columns,
-      [sourceCol]: sourceItems,
-      [targetCol]: targetItems,
-    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -150,9 +139,8 @@ export function Board({
     <DndContext
       id={dndId}
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTask(null)}
     >
