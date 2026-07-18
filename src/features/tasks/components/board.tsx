@@ -70,6 +70,13 @@ export function Board({
 
     const activeId = String(active.id);
     const overId = String(over.id);
+    // dnd-kit keeps the dimmed source card mounted in place for the whole
+    // drag (DragOverlay renders the moving copy separately). Releasing near
+    // a column boundary can leave the pointer over that dimmed original, so
+    // over.id === active.id — treat that as "dropped back where it was",
+    // not as a real target (sourceItems below has activeId filtered out, so
+    // resolving it as a target would miscompute the index as -1).
+    if (overId === activeId) return;
     const sourceCol = columnOf(activeId);
     const targetCol = columnOf(overId);
     if (!sourceCol || !targetCol) return;
