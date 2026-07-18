@@ -6,15 +6,12 @@ import {
   Inbox,
   Target,
   Repeat,
-  NotebookPen,
-  HeartPulse,
   Wallet,
   HandCoins,
   CreditCard,
   StickyNote,
   Bookmark,
   Sparkles,
-  Files,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -33,15 +30,12 @@ export const mainNav: NavItem[] = [
   { title: "Заявки", href: "/leads", icon: Inbox },
   { title: "Цели", href: "/goals", icon: Target },
   { title: "Привычки", href: "/habits", icon: Repeat },
-  { title: "Дневник", href: "/journal", icon: NotebookPen },
-  { title: "Здоровье", href: "/health", icon: HeartPulse },
   { title: "Финансы", href: "/finances", icon: Wallet },
   { title: "Долги", href: "/debts", icon: HandCoins },
   { title: "Подписки", href: "/subscriptions", icon: CreditCard },
   { title: "Заметки", href: "/notes", icon: StickyNote },
   { title: "Ссылки", href: "/links", icon: Bookmark },
   { title: "Хочу", href: "/wishlist", icon: Sparkles },
-  { title: "Файлы", href: "/files", icon: Files },
 ];
 
 export const footerNav: NavItem[] = [
