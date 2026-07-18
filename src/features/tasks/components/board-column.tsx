@@ -9,7 +9,7 @@ import type { TaskStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { TaskCard } from "./task-card";
 import { QuickAdd } from "./quick-add";
-import { TASK_STATUS_LABELS } from "../constants";
+import { STATUS_ACCENT, TASK_STATUS_LABELS } from "../constants";
 import type { TaskWithProject } from "../queries";
 
 export function BoardColumn({
@@ -27,11 +27,20 @@ export function BoardColumn({
     id: `col:${status}`,
     data: { status, columnId: status },
   });
+  const accent = STATUS_ACCENT[status];
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-muted/40">
+    <div
+      className={cn(
+        "flex w-72 shrink-0 flex-col rounded-xl border-t-2 bg-muted/40",
+        accent.border,
+      )}
+    >
       <div className="flex items-center justify-between px-3 py-2.5">
-        <h3 className="text-sm font-medium">{TASK_STATUS_LABELS[status]}</h3>
+        <div className="flex items-center gap-2">
+          <span className={cn("size-1.5 rounded-full", accent.dot)} />
+          <h3 className="text-sm font-medium">{TASK_STATUS_LABELS[status]}</h3>
+        </div>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
           {tasks.length}
         </span>
@@ -40,8 +49,8 @@ export function BoardColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-2 flex-1 flex-col gap-2 px-2 pb-2 transition-colors",
-          isOver && "rounded-lg bg-accent/40",
+          "flex min-h-2 flex-1 flex-col gap-2 px-2 pb-2 transition-colors duration-150",
+          isOver && ["rounded-lg", accent.glow],
         )}
       >
         <SortableContext
