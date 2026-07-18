@@ -41,6 +41,55 @@ export const TASK_PRIORITY_DOT: Record<TaskPriority, string> = {
   URGENT: "bg-red-500",
 };
 
+// Tailwind classes for the priority edge-stripe on kanban cards (parallel
+// palette to TASK_PRIORITY_DOT, applied as a left border instead of a dot).
+export const TASK_PRIORITY_STRIPE: Record<TaskPriority, string> = {
+  LOW: "border-l-muted-foreground",
+  MEDIUM: "border-l-blue-500",
+  HIGH: "border-l-amber-500",
+  URGENT: "border-l-red-500",
+};
+
+// Per-status color accent for the kanban board: a top border + header dot on
+// the column, and a background tint for the drop-zone highlight. Reuses
+// colors already established elsewhere (amber = priority HIGH, emerald =
+// Debts "paid") rather than introducing a new palette.
+export const STATUS_ACCENT: Record<
+  TaskStatus,
+  { border: string; dot: string; glow: string }
+> = {
+  TODO: {
+    border: "border-t-muted-foreground/50",
+    dot: "bg-muted-foreground/70",
+    glow: "bg-muted-foreground/10",
+  },
+  IN_PROGRESS: {
+    border: "border-t-primary",
+    dot: "bg-primary",
+    glow: "bg-primary/10",
+  },
+  REVIEW: {
+    border: "border-t-amber-500",
+    dot: "bg-amber-500",
+    glow: "bg-amber-500/10",
+  },
+  ON_HOLD: {
+    border: "border-t-sky-400",
+    dot: "bg-sky-400",
+    glow: "bg-sky-400/10",
+  },
+  DONE: {
+    border: "border-t-emerald-500",
+    dot: "bg-emerald-500",
+    glow: "bg-emerald-500/10",
+  },
+  CANCELLED: {
+    border: "border-t-muted-foreground/30",
+    dot: "bg-muted-foreground/40",
+    glow: "bg-muted-foreground/10",
+  },
+};
+
 // Sentinel for "no filter" in the list view's selects.
 export const ALL = "ALL";
 
