@@ -3,11 +3,7 @@ import { addDays, endOfDay, endOfMonth, format, startOfMonth, startOfWeek } from
 import { DebtStatus, GoalStatus, TaskStatus, TransactionType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAccountsWithBalance } from "@/features/finances/queries";
-import {
-  computeDebtTotals,
-  installmentOverdue,
-  isOverdue,
-} from "@/features/debts/summary";
+import { computeDebtTotals, isOverdue } from "@/features/debts/summary";
 import { getAgenda } from "@/features/agenda/queries";
 import { entryDayKey, todayKey, weekCount } from "@/features/habits/dates";
 
@@ -71,7 +67,6 @@ export async function getDashboardSummary() {
         dueDate: true,
         principal: true,
         payments: { select: { amount: true } },
-        installments: { select: { seq: true, dueDate: true, status: true } },
       },
     }),
     db.goal.findMany({
@@ -104,17 +99,12 @@ export async function getDashboardSummary() {
       currency: d.currency,
       status: d.status,
       dueDate: d.dueDate,
-      installments: d.installments,
       remaining: Math.max(d.principal.toNumber() - paid, 0),
     };
   });
   const debtTotals = computeDebtTotals(debtRows);
-  // A debt is overdue via its own due date, or (for installment plans) via the
-  // next unpaid month's due date.
-  const overdueDebts = debtRows.filter(
-    (d) =>
-      isOverdue({ dueDate: d.dueDate, status: d.status }, now) ||
-      installmentOverdue(d.installments, now),
+  const overdueDebts = debtRows.filter((d) =>
+    isOverdue({ dueDate: d.dueDate, status: d.status }, now),
   ).length;
 
   // Balance totals per currency (active accounts).

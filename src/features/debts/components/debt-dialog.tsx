@@ -2,9 +2,9 @@
 
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addMonths, format } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
-import { DebtDirection, DebtKind } from "@prisma/client";
+import { DebtDirection } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createDebt } from "../actions";
-import { DEBT_DIRECTION_LABELS, DEBT_KIND_LABELS } from "../constants";
+import { DEBT_DIRECTION_LABELS } from "../constants";
 import type { AccountWithBalance } from "@/features/finances/queries";
 
 const CURRENCIES = ["KZT", "USD"] as const;
@@ -50,7 +50,6 @@ export function DebtDialog({
   );
 
   const [counterparty, setCounterparty] = useState("");
-  const [kind, setKind] = useState<DebtKind>(DebtKind.SIMPLE);
   const [direction, setDirection] = useState<DebtDirection>(
     DebtDirection.I_OWE,
   );
@@ -61,15 +60,10 @@ export function DebtDialog({
   const [borrowedOn, setBorrowedOn] = useState(format(new Date(), "yyyy-MM-dd"));
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
-  const [termMonths, setTermMonths] = useState("6");
-  const [firstPaymentDate, setFirstPaymentDate] = useState(
-    format(addMonths(new Date(), 1), "yyyy-MM-dd"),
-  );
 
   useEffect(() => {
     if (!open) return;
     setCounterparty("");
-    setKind(DebtKind.SIMPLE);
     setDirection(DebtDirection.I_OWE);
     setAmount("");
     setAffectsBalance(true);
@@ -78,42 +72,28 @@ export function DebtDialog({
     setBorrowedOn(format(new Date(), "yyyy-MM-dd"));
     setDueDate("");
     setDescription("");
-    setTermMonths("6");
-    setFirstPaymentDate(format(addMonths(new Date(), 1), "yyyy-MM-dd"));
   }, [open, activeAccounts]);
 
-  const isInstallment = kind === DebtKind.INSTALLMENT;
-  // The debt posts to an account only for a simple debt with the toggle on.
-  const posts = !isInstallment && affectsBalance;
+  // The debt posts to an account only when the toggle is on.
+  const posts = affectsBalance;
 
   const selectedAccount = activeAccounts.find((a) => a.id === accountId);
   const currency = posts
     ? (selectedAccount?.currency ?? "KZT")
     : manualCurrency;
 
-  // Live preview of the monthly installment (for reassurance in the form).
-  const monthly = useMemo(() => {
-    const total = Number(amount);
-    const n = Number(termMonths);
-    if (!isInstallment || !(total > 0) || !(n >= 1)) return null;
-    return Math.round((total / n) * 100) / 100;
-  }, [amount, termMonths, isInstallment]);
-
   function submit() {
     start(async () => {
       const res = await createDebt({
         counterparty,
-        kind,
-        direction: isInstallment ? DebtDirection.I_OWE : direction,
+        direction,
         amount,
         currency,
         affectsBalance,
         accountId: posts ? accountId : "",
         borrowedOn,
-        dueDate: isInstallment ? "" : dueDate,
+        dueDate,
         description,
-        termMonths: isInstallment ? termMonths : undefined,
-        firstPaymentDate: isInstallment ? firstPaymentDate : undefined,
       });
       if ("error" in res) {
         toast.error(res.error);
@@ -128,8 +108,7 @@ export function DebtDialog({
   const canSubmit =
     counterparty.trim().length > 0 &&
     Number(amount) > 0 &&
-    (!posts || Boolean(accountId)) &&
-    (!isInstallment || Number(termMonths) >= 1);
+    (!posts || Boolean(accountId));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,60 +118,35 @@ export function DebtDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Тип</Label>
-              <Select
-                value={kind}
-                onValueChange={(v) => setKind(v as DebtKind)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(DebtKind).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {DEBT_KIND_LABELS[k]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Направление</Label>
-              <Select
-                value={isInstallment ? DebtDirection.I_OWE : direction}
-                onValueChange={(v) => setDirection(v as DebtDirection)}
-                disabled={isInstallment}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(DebtDirection).map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {DEBT_DIRECTION_LABELS[d]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Направление</Label>
+            <Select
+              value={direction}
+              onValueChange={(v) => setDirection(v as DebtDirection)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(DebtDirection).map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {DEBT_DIRECTION_LABELS[d]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="debt-cp">
-              {isInstallment
-                ? "Магазин / кредитор"
-                : direction === DebtDirection.I_OWE
-                  ? "Кому должен"
-                  : "Кто должен"}
+              {direction === DebtDirection.I_OWE ? "Кому должен" : "Кто должен"}
             </Label>
             <Input
               id="debt-cp"
               list={listId}
               value={counterparty}
               onChange={(e) => setCounterparty(e.target.value)}
-              placeholder={isInstallment ? "Например, Kaspi" : "Например, Арман"}
+              placeholder="Например, Арман"
               autoFocus
             />
             <datalist id={listId}>
@@ -204,9 +158,7 @@ export function DebtDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="debt-amount">
-                {isInstallment ? "Полная сумма" : "Сумма"} ({currency})
-              </Label>
+              <Label htmlFor="debt-amount">Сумма ({currency})</Label>
               <Input
                 id="debt-amount"
                 type="number"
@@ -252,88 +204,42 @@ export function DebtDialog({
             )}
           </div>
 
-          {/* Balance toggle — simple debts only. */}
-          {!isInstallment && (
-            <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
-              <input
-                type="checkbox"
-                checked={affectsBalance}
-                onChange={(e) => setAffectsBalance(e.target.checked)}
-                className="mt-0.5 size-4 accent-primary"
-              />
-              <span>
-                <span className="font-medium">Провести через счёт</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  Выключите для старых долгов — деньги давно получены и в текущем
-                  балансе их уже нет.
-                </span>
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
+            <input
+              type="checkbox"
+              checked={affectsBalance}
+              onChange={(e) => setAffectsBalance(e.target.checked)}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span>
+              <span className="font-medium">Провести через счёт</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Выключите для старых долгов — деньги давно получены и в текущем
+                балансе их уже нет.
               </span>
-            </label>
-          )}
+            </span>
+          </label>
 
-          {isInstallment ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="debt-term">Срок (месяцев)</Label>
-                <Input
-                  id="debt-term"
-                  type="number"
-                  min="1"
-                  max="120"
-                  step="1"
-                  value={termMonths}
-                  onChange={(e) => setTermMonths(e.target.value)}
-                />
-                {monthly !== null && (
-                  <p className="text-xs text-muted-foreground">
-                    ≈ {monthly.toLocaleString("ru-RU")} {currency} / мес
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="debt-first">Первый платёж</Label>
-                <Input
-                  id="debt-first"
-                  type="date"
-                  value={firstPaymentDate}
-                  onChange={(e) => setFirstPaymentDate(e.target.value)}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="debt-date">Дата</Label>
-                <Input
-                  id="debt-date"
-                  type="date"
-                  value={borrowedOn}
-                  onChange={(e) => setBorrowedOn(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="debt-due">Срок (необязательно)</Label>
-                <Input
-                  id="debt-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {isInstallment && (
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="debt-purchase">Дата покупки</Label>
+              <Label htmlFor="debt-date">Дата</Label>
               <Input
-                id="debt-purchase"
+                id="debt-date"
                 type="date"
                 value={borrowedOn}
                 onChange={(e) => setBorrowedOn(e.target.value)}
               />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="debt-due">Срок (необязательно)</Label>
+              <Input
+                id="debt-due"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="debt-desc">Комментарий</Label>

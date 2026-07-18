@@ -1,23 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addMonths } from "date-fns";
 import {
   DebtDirection,
-  DebtKind,
   DebtStatus,
-  InstallmentStatus,
   TransactionType,
   type Prisma,
 } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  debtCreateSchema,
-  debtUpdateSchema,
-  installmentPaySchema,
-  paymentCreateSchema,
-} from "./schema";
+import { debtCreateSchema, debtUpdateSchema, paymentCreateSchema } from "./schema";
 import { DEBT_CATEGORY } from "./constants";
 
 async function requireAuth() {
@@ -70,29 +62,6 @@ async function resolveDebtCategory(
   return cat.id;
 }
 
-// Splits a total into `months` equal monthly payments (working in whole cents so
-// the parts always sum back to the total; the last month absorbs the remainder).
-// Due dates run monthly from `firstDate`.
-function buildSchedule(
-  total: number,
-  months: number,
-  firstDate: Date,
-): { seq: number; dueDate: Date; amount: number }[] {
-  const totalCents = Math.round(total * 100);
-  const baseCents = Math.floor(totalCents / months);
-  const rows = [];
-  for (let i = 0; i < months; i++) {
-    const cents =
-      i === months - 1 ? totalCents - baseCents * (months - 1) : baseCents;
-    rows.push({
-      seq: i + 1,
-      dueDate: addMonths(firstDate, i),
-      amount: cents / 100,
-    });
-  }
-  return rows;
-}
-
 // ── Debts ───────────────────────────────────────────────────────────────────
 export async function createDebt(input: unknown): Promise<ActionResult> {
   await requireAuth();
@@ -102,7 +71,6 @@ export async function createDebt(input: unknown): Promise<ActionResult> {
   }
   const {
     counterparty,
-    kind,
     direction,
     amount,
     currency,
@@ -111,14 +79,9 @@ export async function createDebt(input: unknown): Promise<ActionResult> {
     borrowedOn,
     dueDate,
     description,
-    termMonths,
-    firstPaymentDate,
   } = parsed.data;
 
-  const isInstallment = kind === DebtKind.INSTALLMENT;
-  // An installment plan never posts to the balance on creation (goods received,
-  // not cash). A simple debt only posts when the toggle is on.
-  const posts = !isInstallment && affectsBalance;
+  const posts = affectsBalance;
 
   // A posting debt needs a matching-currency account to move money through.
   if (posts) {
@@ -156,11 +119,10 @@ export async function createDebt(input: unknown): Promise<ActionResult> {
       disbursementTransactionId = transaction.id;
     }
 
-    const debt = await tx.debt.create({
+    await tx.debt.create({
       data: {
         counterpartyId: cp.id,
-        kind,
-        direction: isInstallment ? DebtDirection.I_OWE : direction,
+        direction,
         principal: amount,
         currency,
         description: clean(description),
@@ -169,22 +131,6 @@ export async function createDebt(input: unknown): Promise<ActionResult> {
         disbursementTransactionId,
       },
     });
-
-    if (isInstallment && termMonths && firstPaymentDate) {
-      const schedule = buildSchedule(
-        amount,
-        termMonths,
-        toDate(firstPaymentDate),
-      );
-      await tx.debtInstallment.createMany({
-        data: schedule.map((s) => ({
-          debtId: debt.id,
-          seq: s.seq,
-          dueDate: s.dueDate,
-          amount: s.amount,
-        })),
-      });
-    }
   });
   revalidateDebts();
   return { ok: true };
@@ -333,131 +279,6 @@ export async function deletePayment(id: string): Promise<ActionResult> {
     await tx.debtPayment.delete({ where: { id } });
     await tx.debt.update({
       where: { id: payment.debtId },
-      data: { status: DebtStatus.OPEN },
-    });
-  });
-  revalidateDebts();
-  return { ok: true };
-}
-
-// ── Installments ──────────────────────────────────────────────────────────────
-// Pays one scheduled month of an installment plan: posts a real expense to the
-// chosen account, records a DebtPayment (so paid/remaining reuse the same math),
-// and marks the month PAID. Closes the debt when the last month is paid.
-export async function payInstallment(input: unknown): Promise<ActionResult> {
-  await requireAuth();
-  const parsed = installmentPaySchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
-  }
-  const { installmentId, accountId, paidOn } = parsed.data;
-
-  const installment = await db.debtInstallment.findUnique({
-    where: { id: installmentId },
-    include: {
-      debt: {
-        include: {
-          counterparty: { select: { name: true } },
-          installments: { select: { id: true, status: true } },
-        },
-      },
-    },
-  });
-  if (!installment) return { error: "Платёж не найден" };
-  if (installment.status === InstallmentStatus.PAID) {
-    return { error: "Этот месяц уже оплачен" };
-  }
-  const { debt } = installment;
-
-  const account = await db.account.findUnique({ where: { id: accountId } });
-  if (!account) return { error: "Счёт не найден" };
-  if (account.currency !== debt.currency) {
-    return {
-      error: `Валюта счёта (${account.currency}) не совпадает с валютой долга (${debt.currency})`,
-    };
-  }
-
-  const amount = installment.amount.toNumber();
-  const total = debt.installments.length;
-  // All other months already paid → this payment closes the debt.
-  const lastOpen =
-    debt.installments.filter((i) => i.status !== InstallmentStatus.PAID)
-      .length === 1;
-  const type = repaymentType(debt.direction);
-
-  await db.$transaction(async (tx) => {
-    const categoryId = await resolveDebtCategory(tx, type);
-    const transaction = await tx.transaction.create({
-      data: {
-        type,
-        amount,
-        date: toDate(paidOn),
-        accountId,
-        categoryId,
-        note: `Рассрочка ${installment.seq}/${total}: ${debt.counterparty.name}`,
-      },
-    });
-    const payment = await tx.debtPayment.create({
-      data: {
-        debtId: debt.id,
-        amount,
-        paidOn: toDate(paidOn),
-        transactionId: transaction.id,
-        note: `Платёж ${installment.seq}/${total}`,
-      },
-    });
-    await tx.debtInstallment.update({
-      where: { id: installmentId },
-      data: {
-        status: InstallmentStatus.PAID,
-        paidOn: toDate(paidOn),
-        paymentId: payment.id,
-      },
-    });
-    if (lastOpen) {
-      await tx.debt.update({
-        where: { id: debt.id },
-        data: { status: DebtStatus.PAID },
-      });
-    }
-  });
-  revalidateDebts();
-  return { ok: true };
-}
-
-// Reverses an installment payment: removes its transaction + DebtPayment, sets
-// the month back to PENDING and reopens the debt.
-export async function unpayInstallment(id: string): Promise<ActionResult> {
-  await requireAuth();
-  if (!id) return { error: "Нет id" };
-  const installment = await db.debtInstallment.findUnique({
-    where: { id },
-    include: { payment: { select: { id: true, transactionId: true } } },
-  });
-  if (!installment) return { error: "Платёж не найден" };
-  if (installment.status !== InstallmentStatus.PAID) {
-    return { error: "Этот месяц не оплачен" };
-  }
-
-  await db.$transaction(async (tx) => {
-    await tx.debtInstallment.update({
-      where: { id },
-      data: {
-        status: InstallmentStatus.PENDING,
-        paidOn: null,
-        paymentId: null,
-      },
-    });
-    if (installment.payment) {
-      await tx.debtPayment.delete({ where: { id: installment.payment.id } });
-      if (installment.payment.transactionId) {
-        await tx.transaction.deleteMany({
-          where: { id: installment.payment.transactionId },
-        });
-      }
-    }
-    await tx.debt.update({
-      where: { id: installment.debtId },
       data: { status: DebtStatus.OPEN },
     });
   });

@@ -34,7 +34,7 @@ import { DebtDatesDialog } from "./debt-dates-dialog";
 import { PaymentDialog } from "./payment-dialog";
 import { deleteDebt } from "../actions";
 import { DEBT_DIRECTION_LABELS } from "../constants";
-import { computeDebtTotals, nextInstallment } from "../summary";
+import { computeDebtTotals } from "../summary";
 import type { CounterpartyView, DebtView } from "../queries";
 
 export function DebtsView({
@@ -278,13 +278,7 @@ function DebtRow({
   onDelete: (debt: DebtView, counterpartyName: string) => void;
 }) {
   const settled = debt.status === "PAID";
-  const isInstallment = debt.kind === "INSTALLMENT";
-  const next = isInstallment ? nextInstallment(debt.installments) : null;
-  const paidCount = debt.installments.filter(
-    (i) => i.status === "PAID",
-  ).length;
-  // Installments track their own schedule; a plain debt uses its single dueDate.
-  const dueDate = isInstallment ? (next?.dueDate ?? null) : debt.dueDate;
+  const dueDate = debt.dueDate;
   const days = dueDate
     ? differenceInCalendarDays(dueDate, new Date())
     : null;
@@ -302,11 +296,6 @@ function DebtRow({
             <Badge variant="outline" className="text-[10px] uppercase">
               {DEBT_DIRECTION_LABELS[debt.direction]}
             </Badge>
-            {isInstallment && (
-              <Badge className="bg-primary/15 text-primary text-[10px] uppercase">
-                Рассрочка
-              </Badge>
-            )}
             {debt.description && (
               <span className="truncate text-sm text-muted-foreground">
                 {debt.description}
@@ -322,14 +311,6 @@ function DebtRow({
               </span>
             )}
           </p>
-          {isInstallment && !settled && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Оплачено {paidCount} из {debt.installments.length} мес
-              {next
-                ? ` · след. платёж ${format(next.dueDate, "d MMM", { locale: ru })}`
-                : ""}
-            </p>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -360,7 +341,7 @@ function DebtRow({
                 className="cursor-pointer"
               >
                 <Wallet className="size-4" />
-                {isInstallment ? "График" : settled ? "История" : "Погашение"}
+                {settled ? "История" : "Погашение"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => onEditDates(debt)}

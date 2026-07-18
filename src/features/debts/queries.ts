@@ -13,7 +13,6 @@ export async function getDebtsView() {
         orderBy: [{ status: "asc" }, { borrowedOn: "desc" }],
         include: {
           payments: { orderBy: { paidOn: "desc" } },
-          installments: { orderBy: { seq: "asc" } },
         },
       },
     },
@@ -26,7 +25,6 @@ export async function getDebtsView() {
       return {
         id: d.id,
         counterpartyId: d.counterpartyId,
-        kind: d.kind,
         direction: d.direction,
         principal,
         currency: d.currency,
@@ -42,14 +40,6 @@ export async function getDebtsView() {
           paidOn: p.paidOn,
           note: p.note,
         })),
-        installments: d.installments.map((i) => ({
-          id: i.id,
-          seq: i.seq,
-          dueDate: i.dueDate,
-          amount: i.amount.toNumber(),
-          status: i.status,
-          paidOn: i.paidOn,
-        })),
       };
     });
     return { id: c.id, name: c.name, note: c.note, debts };
@@ -61,7 +51,6 @@ export type CounterpartyView = Awaited<
 >[number];
 export type DebtView = CounterpartyView["debts"][number];
 export type PaymentView = DebtView["payments"][number];
-export type InstallmentView = DebtView["installments"][number];
 
 // Distinct counterparty names for the create dialog's combobox / datalist.
 export async function getCounterpartyNames(): Promise<string[]> {
