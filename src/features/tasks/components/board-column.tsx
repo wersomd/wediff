@@ -34,11 +34,11 @@ export function BoardColumn({
   return (
     <div
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-lg border bg-muted/50",
+        "flex w-72 shrink-0 flex-col rounded-xl border border-t-[3px] bg-muted/60",
         accent.border,
       )}
     >
-      <div className="flex items-center justify-between px-3 py-2.5">
+      <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <span className={cn("size-1.5 rounded-full", accent.dot)} />
           <h3 className="text-sm font-medium">{TASK_STATUS_LABELS[status]}</h3>
@@ -51,7 +51,7 @@ export function BoardColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-2 flex-1 flex-col gap-2 px-2 pb-2 transition-colors duration-150",
+          "flex min-h-32 flex-1 flex-col gap-2 px-2 pb-2 transition-colors duration-150",
           isOver && ["rounded-lg", accent.glow],
         )}
       >

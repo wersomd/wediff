@@ -7,15 +7,15 @@
    electric-blue accent ("signal", #2E5CFF), matching the WH Solutions identity. */
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.625rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.17 0.006 264);
+  --background: #F4F6FB;
+  --foreground: #17233B;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.17 0.006 264);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.006 264);
-  --primary: oklch(0.55 0.24 264);
+  --primary: #174BEB;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.965 0.008 264);
   --secondary-foreground: oklch(0.17 0.006 264);
@@ -26,7 +26,7 @@
   --destructive: oklch(0.56 0.16 28);
   --destructive-foreground: oklch(0.985 0 0);
   --success: oklch(0.5 0.12 155);
-  --border: oklch(0.9 0.004 264);
+  --border: #DCE2ED;
   --input: oklch(0.9 0.004 264);
   --ring: oklch(0.55 0.24 264);
 
@@ -142,3 +142,20 @@
     font-family: var(--font-display);
   }
 }
+
+/* Workspace chrome: a confident blue spine and quiet, legible work surfaces. */
+.workspace-sidebar { background: #174BEB; }
+.dark .workspace-sidebar { background: #1539A5; }
+.workspace-nav-link { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: rgb(255 255 255 / 88%); }
+.workspace-nav-link:hover { background: rgb(255 255 255 / 12%); color: white; }
+.workspace-nav-link.is-active { background: white; color: #174BEB; box-shadow: 0 3px 10px rgb(0 20 90 / 12%); }
+.workspace :is(button,a,input,textarea):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.workspace-sidebar :is(button,a):focus-visible { outline-color: white; }
+.workspace-panel { border: 1px solid var(--border); border-radius: 12px; background: var(--card); overflow: hidden; }
+.workspace-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.workspace-tab { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted-foreground); white-space: nowrap; }
+.workspace-tab[aria-selected="true"], .workspace-tab[aria-pressed="true"] { background: var(--card); color: var(--primary); box-shadow: 0 1px 4px rgb(23 35 59 / 10%); }
+.workspace-tab:hover { color: var(--foreground); }
+.task-detail-panel { left: auto; right: 0; top: 0; height: 100dvh; max-height: 100dvh; max-width: 100vw; width: 560px; transform: none; translate: none; border-radius: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 32px 24px; background: var(--card); }
+@media (min-width: 640px) { .task-detail-panel { max-width: 560px; padding: 36px 32px; } }
+@media (prefers-reduced-motion: reduce) { .workspace *, .task-detail-panel { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

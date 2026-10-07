@@ -1,6 +1,7 @@
 import "server-only";
 import { addDays, endOfDay } from "date-fns";
-import { DebtStatus, TaskStatus, WishStatus } from "@prisma/client";
+import { DebtStatus, WishStatus } from "@prisma/client";
+import { OPEN_TASK_STATUSES } from "@/features/tasks/constants";
 import { db } from "@/lib/db";
 import { getAccountsWithBalance } from "@/features/finances/queries";
 import { computeDebtTotals, isOverdue } from "@/features/debts/summary";
@@ -15,12 +16,12 @@ export async function getDashboardSummary() {
       // Tasks due today or overdue, not finished.
       db.task.count({
         where: {
-          status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
+          status: { in: OPEN_TASK_STATUSES },
           dueDate: { not: null, lte: endToday },
         },
       }),
       db.task.count({
-        where: { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
+        where: { status: { in: OPEN_TASK_STATUSES } },
       }),
       getAccountsWithBalance(),
       db.subscription.findMany({

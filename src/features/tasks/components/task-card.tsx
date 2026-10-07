@@ -2,7 +2,6 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion } from "framer-motion";
 import { Ban, CalendarClock, CheckCircle2 } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -47,17 +46,20 @@ export function TaskCard({
       {...attributes}
       {...listeners}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Открыть задачу: ${task.title}`}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") { event.preventDefault(); onClick?.(); }
+        else listeners?.onKeyDown?.(event);
+      }}
       // dnd-kit's PointerSensor needs touch-action:none *on the element that
       // receives the pointer events* or a touch drag never starts (the browser
       // claims the gesture for scrolling); select-none stops a mouse press from
       // selecting the card text instead of dragging.
       className={cn(!dndDisabled && "touch-none select-none")}
     >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
+      <div
         className={cn(
           "group rounded-md border border-l-[3px] border-border bg-card p-3 text-left transition-colors duration-150 hover:bg-muted/40",
           dndDisabled
@@ -113,7 +115,7 @@ export function TaskCard({
             )}
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

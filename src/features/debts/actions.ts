@@ -30,6 +30,7 @@ function toDate(value: string) {
 
 function revalidateDebts() {
   revalidatePath("/debts");
+  revalidatePath("/calendar");
   revalidatePath("/finances"); // balances changed
   revalidatePath("/dashboard"); // summary widget
 }

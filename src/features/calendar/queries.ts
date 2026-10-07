@@ -1,6 +1,8 @@
 import "server-only";
-import { addDays, endOfDay } from "date-fns";
-import { DebtStatus, GoalStatus, TaskStatus } from "@prisma/client";
+import { addDays, endOfDay, format } from "date-fns";
+import { DebtStatus, GoalStatus } from "@prisma/client";
+import { OPEN_TASK_STATUSES } from "@/features/tasks/constants";
+import { dayKey, localEventTime } from "@/lib/workspace-date";
 import { db } from "@/lib/db";
 
 export type CalendarKind = "task" | "subscription" | "debt" | "goal" | "event";
@@ -22,9 +24,11 @@ export type DateRange = { from: Date; to: Date };
 // exact range, so viewing a past/future month doesn't get flooded with
 // old overdue items that don't belong to it.
 function dueDateWindow(range: DateRange) {
-  const now = new Date();
-  if (range.from <= now && now <= range.to) return { lte: range.to };
-  return { gte: range.from, lte: range.to };
+  const from = localEventTime(format(range.from, "yyyy-MM-dd"));
+  const to = new Date(`${format(range.to, "yyyy-MM-dd")}T23:59:59.999Z`);
+  const today = new Date(`${dayKey()}T00:00:00Z`);
+  if (from <= today && today <= to) return { lte: to };
+  return { gte: from, lte: to };
 }
 
 // Merges task/goal/debt/subscription due dates with freeform calendar
@@ -35,7 +39,7 @@ export async function getCalendarItems(range: DateRange): Promise<CalendarItem[]
   const [tasks, subs, debts, goals, events] = await Promise.all([
     db.task.findMany({
       where: {
-        status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
+        status: { in: OPEN_TASK_STATUSES },
         dueDate: { not: null, ...dueWindow },
       },
       select: { id: true, title: true, dueDate: true },
@@ -53,7 +57,7 @@ export async function getCalendarItems(range: DateRange): Promise<CalendarItem[]
       select: { id: true, title: true, dueDate: true },
     }),
     db.calendarEvent.findMany({
-      where: { startAt: { gte: range.from, lte: range.to } },
+      where: { startAt: { gte: localEventTime(format(range.from, "yyyy-MM-dd")), lt: new Date(localEventTime(format(range.to, "yyyy-MM-dd")).getTime() + 86400000) } },
       select: { id: true, title: true, startAt: true, note: true },
     }),
   ]);
@@ -64,14 +68,14 @@ export async function getCalendarItems(range: DateRange): Promise<CalendarItem[]
       kind: "task" as const,
       title: t.title,
       date: t.dueDate as Date,
-      href: "/tasks",
+      href: `/tasks?item=${encodeURIComponent(t.id)}`,
     })),
     ...subs.map((s) => ({
       id: `sub-${s.id}`,
       kind: "subscription" as const,
       title: s.name,
       date: s.nextPaymentDate,
-      href: "/subscriptions",
+      href: `/subscriptions?item=${encodeURIComponent(s.id)}`,
       meta: "Платёж",
     })),
     ...debts.map((d) => ({
@@ -79,7 +83,7 @@ export async function getCalendarItems(range: DateRange): Promise<CalendarItem[]
       kind: "debt" as const,
       title: d.counterparty.name,
       date: d.dueDate as Date,
-      href: "/debts",
+      href: `/debts?item=${encodeURIComponent(d.id)}`,
       meta: "Срок долга",
     })),
     ...goals.map((g) => ({
@@ -95,7 +99,7 @@ export async function getCalendarItems(range: DateRange): Promise<CalendarItem[]
       kind: "event" as const,
       title: e.title,
       date: e.startAt,
-      href: "/calendar",
+      href: `/calendar?day=${dayKey(e.startAt)}`,
       meta: e.note ?? undefined,
     })),
   ];

@@ -9,8 +9,10 @@ export function TaskList({
   tasks,
   onToggle,
   onCardClick,
+  disabled,
 }: {
   tasks: TaskWithProject[];
+  disabled?: boolean;
   onToggle: (id: string, done: boolean) => void;
   onCardClick: (task: TaskWithProject) => void;
 }) {
@@ -25,11 +27,12 @@ export function TaskList({
   }
 
   return (
-    <div className="rounded-xl border border-border">
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       {tasks.map((task) => (
         <TaskRow
           key={task.id}
           task={task}
+          disabled={disabled}
           onToggle={(done) => onToggle(task.id, done)}
           onClick={() => onCardClick(task)}
         />

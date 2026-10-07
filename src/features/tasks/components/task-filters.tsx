@@ -72,6 +72,7 @@ export function TaskFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>Все статусы</SelectItem>
+            <SelectItem value="OPEN">Открытые</SelectItem>
           {TASK_STATUS_ORDER.map((s) => (
             <SelectItem key={s} value={s}>
               {TASK_STATUS_LABELS[s]}

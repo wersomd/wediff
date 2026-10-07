@@ -26,17 +26,17 @@ describe("formatDue overdue rules", () => {
     );
   });
 
-  it("does NOT flag a past-due REVIEW task", () => {
+  it("flags a past-due REVIEW task in the shared open-task model", () => {
     freezeAt("2026-06-15T10:00:00");
     const info = formatDue(new Date("2026-06-01"), TaskStatus.REVIEW);
-    expect(info.overdue).toBe(false);
-    expect(info.overdueDays).toBe(0);
+    expect(info.overdue).toBe(true);
+    expect(info.overdueDays).toBe(14);
   });
 
-  it("does NOT flag a past-due ON_HOLD task", () => {
+  it("flags a past-due ON_HOLD task in the shared open-task model", () => {
     freezeAt("2026-06-15T10:00:00");
     expect(formatDue(new Date("2026-06-01"), TaskStatus.ON_HOLD).overdue).toBe(
-      false,
+      true,
     );
   });
 

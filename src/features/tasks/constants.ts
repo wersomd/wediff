@@ -1,5 +1,7 @@
 import { TaskStatus, TaskPriority } from "@prisma/client";
 
+export const OPEN_TASK_STATUSES: TaskStatus[] = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.ON_HOLD];
+
 export const DEFAULT_TASK_VIEW = "list";
 
 // Board columns, left to right.
@@ -120,6 +122,7 @@ export type TaskFiltersState = {
   projectId: string;
   due: string;
   created: string;
+  query?: string;
 };
 
 // Sort applied within each board column and across the whole list. "manual" is

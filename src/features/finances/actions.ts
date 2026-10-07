@@ -34,6 +34,7 @@ function clean(value?: string) {
 }
 
 function revalidateFinances() {
+  revalidatePath("/dashboard");
   revalidatePath("/finances");
 }
 

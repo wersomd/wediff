@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { allNavItems } from "@/config/nav";
+import { allNavItems, railNav, footerNav } from "@/config/nav";
 import { filterNavItems } from "./command-palette-filter";
 
 export function CommandPalette({
@@ -16,7 +16,7 @@ export function CommandPalette({
 }) {
   const [query, setQuery] = useState("");
   const router = useRouter();
-  const items = useMemo(() => allNavItems(), []);
+  const items = useMemo(() => [...railNav.map((item) => ({ ...item, title: item.href === "/dashboard" ? "Сегодня" : item.title, groupTitle: "Пространство" })), ...allNavItems(), ...footerNav.map((item) => ({ ...item, groupTitle: "Пространство" }))], []);
   const results = useMemo(() => filterNavItems(items, query), [items, query]);
 
   function go(href: string) {
@@ -35,6 +35,7 @@ export function CommandPalette({
     >
       <DialogContent
         showCloseButton={false}
+        aria-describedby={undefined}
         className="top-[20%] max-w-md translate-y-0 gap-0 rounded-2xl p-0 shadow-lg"
         onInteractOutside={() => {
           // Unlike the app's form dialogs, a stray click outside a "jump to"

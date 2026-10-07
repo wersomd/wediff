@@ -3,8 +3,11 @@
 import { Suspense, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
+import { useWorkspaceIntent } from "@/components/shared/use-workspace-intent";
+import { Input } from "@/components/ui/input";
+import { ALL } from "../constants";
 import { Button } from "@/components/ui/button";
 import { Board, type Columns } from "./board";
 import { TaskList } from "./task-list";
@@ -47,7 +50,7 @@ function TasksViewInner({
   lockedProjectId,
 }: TasksViewProps) {
   const router = useRouter();
-  const [, start] = useTransition();
+  const [pending, start] = useTransition();
   const { view, filters, sort, isFiltered, setView, setFilters, setSort, reset } =
     useTaskView();
 
@@ -95,8 +98,15 @@ function TasksViewInner({
     setDialogOpen(true);
   }
 
+  useWorkspaceIntent({ onCreate: openCreate, onItem: (id) => {
+    const task = initialTasks.find((t) => t.id === id);
+    if (task) { setEditing(task); setDialogOpen(true); }
+    else toast.error("Задача не найдена");
+  } });
+
   function addTask(title: string, status: TaskStatus) {
     start(async () => {
+      try {
       const res = await createTask({
         title,
         status,
@@ -107,6 +117,7 @@ function TasksViewInner({
         return;
       }
       router.refresh();
+      } catch { toast.error("Не удалось создать задачу. Попробуйте ещё раз."); }
     });
   }
 
@@ -116,22 +127,30 @@ function TasksViewInner({
     orderedIds: string[],
   ) {
     start(async () => {
-      const res = await moveTask({ taskId, toStatus, orderedIds });
-      if ("error" in res) {
-        toast.error(res.error);
-        router.refresh(); // revert to server truth
+      try {
+        const res = await moveTask({ taskId, toStatus, orderedIds });
+        if ("error" in res) throw new Error(res.error);
+        router.refresh();
+      } catch {
+        setColumns(groupByStatus(initialTasks));
+        toast.error("Не удалось переместить задачу. Порядок восстановлен.");
       }
     });
   }
 
   function onToggle(id: string, done: boolean) {
+    if (pending) return;
+    const previous = columns;
     const target = done ? TaskStatus.DONE : TaskStatus.TODO;
     setColumns((prev) => moveToStatus(prev, id, target));
     start(async () => {
-      const res = await toggleDone(id, done);
-      if ("error" in res) {
-        toast.error(res.error);
+      try {
+        const res = await toggleDone(id, done);
+        if ("error" in res) throw new Error(res.error);
         router.refresh();
+      } catch {
+        setColumns(previous);
+        toast.error("Не удалось сохранить задачу. Попробуйте ещё раз.");
       }
     });
   }
@@ -151,6 +170,12 @@ function TasksViewInner({
         </Button>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+        <div className="flex flex-wrap gap-1">
+          {[{ label: "Все задачи", due: ALL, status: ALL }, { label: "Открытые", due: ALL, status: "OPEN" }, { label: "Сегодня", due: "TODAY", status: "OPEN" }, { label: "Просрочено", due: "OVERDUE", status: "OPEN" }, { label: "На неделе", due: "WEEK", status: "OPEN" }].map((preset) => <button key={preset.label} className="workspace-tab" aria-pressed={filters.due === preset.due && filters.status === preset.status} onClick={() => setFilters({ ...filters, due: preset.due, status: preset.status })}>{preset.label}</button>)}
+        </div>
+        <div className="relative w-full sm:w-56"><Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input aria-label="Поиск задач" placeholder="Найти задачу…" value={filters.query ?? ""} onChange={(e) => setFilters({ ...filters, query: e.target.value })} className="pl-9" /></div>
+      </div>
       <TaskFilters
         filters={filters}
         onChange={setFilters}
@@ -162,10 +187,11 @@ function TasksViewInner({
         showProject={!lockedProjectId}
       />
 
+      {view === "board" && dndDisabled && <p className="rounded-lg bg-primary/5 px-4 py-3 text-xs text-muted-foreground">Чтобы менять порядок перетаскиванием, сбросьте фильтры и выберите сортировку «Вручную». Статус можно изменить в карточке задачи.</p>}
       {view === "board" ? (
         <Board
           columns={boardColumns}
-          dndDisabled={dndDisabled}
+          dndDisabled={dndDisabled || pending}
           onColumnsChange={setColumns}
           onMoveEnd={persistMove}
           onAddTask={addTask}
@@ -174,6 +200,7 @@ function TasksViewInner({
       ) : (
         <TaskList
           tasks={listTasks}
+          disabled={pending}
           onToggle={onToggle}
           onCardClick={onCardClick}
         />

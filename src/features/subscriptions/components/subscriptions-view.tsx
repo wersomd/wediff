@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useWorkspaceIntent } from "@/components/shared/use-workspace-intent";
+import { daysFromToday } from "@/lib/workspace-date";
 import { useRouter } from "next/navigation";
-import { differenceInCalendarDays, format } from "date-fns";
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
 import {
@@ -47,7 +49,7 @@ export function SubscriptionsView({
   categories: string[];
 }) {
   const router = useRouter();
-  const [, start] = useTransition();
+  const [pending, start] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SubscriptionRow | null>(null);
 
@@ -67,8 +69,16 @@ export function SubscriptionsView({
     setDialogOpen(true);
   }
 
+  useWorkspaceIntent({ onCreate: openCreate, onItem: (id) => {
+    const record = subscriptions.find((s) => s.id === id);
+    if (record) { setEditing(record); setDialogOpen(true); }
+    else toast.error("Подписка не найдена");
+  } });
+
   function paid(s: SubscriptionRow) {
+    if (pending) return;
     start(async () => {
+      try {
       const res = await markSubscriptionPaid(s.id);
       if ("error" in res) {
         toast.error(res.error);
@@ -82,6 +92,7 @@ export function SubscriptionsView({
         )}`,
       );
       router.refresh();
+      } catch { toast.error("Не удалось обновить дату. Попробуйте ещё раз."); }
     });
   }
 
@@ -113,7 +124,7 @@ export function SubscriptionsView({
     <>
       <PageHeader
         title="Подписки"
-        description="Регулярные платежи с напоминанием о следующем списании."
+        description="Сервисы, даты продления и стоимость твоих подписок."
         action={
           <Button onClick={openCreate}>
             <Plus className="size-4" />
@@ -122,6 +133,7 @@ export function SubscriptionsView({
         }
       />
 
+      <p className="mb-5 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">«Продлить на период» переносит следующую дату оплаты. Расход на счёте добавляется отдельно в финансах.</p>
       {Object.keys(totals).length > 0 && (
         <div className="mb-6 flex flex-wrap gap-3">
           {Object.entries(totals).map(([currency, total]) => (
@@ -147,7 +159,7 @@ export function SubscriptionsView({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {subscriptions.map((s) => {
-            const days = differenceInCalendarDays(s.nextPaymentDate, new Date());
+            const days = daysFromToday(s.nextPaymentDate);
             const overdue = days < 0;
             const dueSoon = !overdue && days <= s.reminderDaysBefore;
             return (
@@ -180,9 +192,9 @@ export function SubscriptionsView({
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => paid(s)} className="cursor-pointer">
+                      <DropdownMenuItem disabled={pending || !s.active} onSelect={() => paid(s)} className="cursor-pointer">
                         <Check className="size-4" />
-                        Оплачено
+                        Продлить на период
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() => {
@@ -250,6 +262,7 @@ export function SubscriptionsView({
                   )}
                 </div>
 
+                <Button variant="outline" className="mt-4 w-full" disabled={pending || !s.active} onClick={() => paid(s)}><Check className="size-4" />Продлить на период</Button>
                 {s.url && (
                   <a
                     href={s.url}

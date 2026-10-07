@@ -24,6 +24,8 @@ function clean(value?: string) {
 
 function revalidateTaskViews() {
   revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   revalidatePath("/projects", "layout");
 }
 

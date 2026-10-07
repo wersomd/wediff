@@ -24,13 +24,13 @@ export function TransactionList({
   onDelete: (t: TransactionRow) => void;
 }) {
   return (
-    <div className="rounded-lg border border-border">
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       {transactions.map((t) => {
         const income = t.type === TransactionType.INCOME;
         return (
           <div
             key={t.id}
-            className="flex items-center gap-3 border-b border-border px-3 py-2.5 last:border-0 hover:bg-accent/40"
+            className="flex items-center gap-3 border-b border-border px-4 py-4 last:border-0 hover:bg-accent/40"
           >
             <span
               className={cn(

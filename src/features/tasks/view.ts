@@ -1,5 +1,6 @@
-import { differenceInCalendarDays, startOfDay, subDays } from "date-fns";
-import { ALL, TASK_PRIORITY_ORDER, type TaskFiltersState, type TaskSort } from "./constants";
+import { startOfDay, subDays } from "date-fns";
+import { daysFromToday } from "@/lib/workspace-date";
+import { ALL, OPEN_TASK_STATUSES, TASK_PRIORITY_ORDER, type TaskFiltersState, type TaskSort } from "./constants";
 import type { TaskWithProject } from "./queries";
 
 // Due-date bucket check for the "due" filter select.
@@ -11,10 +12,10 @@ export function matchesDue(
   if (due === ALL) return true;
   if (due === "NONE") return task.dueDate === null;
   if (!task.dueDate) return false;
-  const days = differenceInCalendarDays(task.dueDate, now);
+  const days = daysFromToday(task.dueDate, now);
   if (due === "OVERDUE") return days < 0;
   if (due === "TODAY") return days === 0;
-  if (due === "WEEK") return days >= 0 && days <= 7;
+  if (due === "WEEK") return days >= 0 && days < 7;
   return true;
 }
 
@@ -41,7 +42,10 @@ export function matchesFilters(
   filters: TaskFiltersState,
   now: Date,
 ): boolean {
-  if (filters.status !== ALL && task.status !== filters.status) return false;
+  if (filters.query?.trim() && !task.title.toLocaleLowerCase("ru").includes(filters.query.trim().toLocaleLowerCase("ru"))) return false;
+  if (filters.status === "OPEN") {
+    if (!OPEN_TASK_STATUSES.includes(task.status)) return false;
+  } else if (filters.status !== ALL && task.status !== filters.status) return false;
   if (filters.priority !== ALL && task.priority !== filters.priority)
     return false;
   if (filters.projectId !== ALL && (task.projectId ?? "") !== filters.projectId)

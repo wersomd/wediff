@@ -112,3 +112,29 @@ describe("applyTaskView", () => {
     expect(out).toEqual([keep2, keep1]);
   });
 });
+
+describe("workspace selection", () => {
+  const now = new Date("2026-10-06T20:00:00Z");
+  it("includes review and paused tasks in open selection and excludes terminal states", () => {
+    for (const status of [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.ON_HOLD]) {
+      expect(matchesFilters(task({ status }), { ...NO_FILTERS, status: "OPEN" }, now)).toBe(true);
+    }
+    for (const status of [TaskStatus.DONE, TaskStatus.CANCELLED]) {
+      expect(matchesFilters(task({ status }), { ...NO_FILTERS, status: "OPEN" }, now)).toBe(false);
+    }
+  });
+  it("uses a seven-day window starting with today in Almaty", () => {
+    const filters = { ...NO_FILTERS, due: "WEEK" };
+    expect(matchesFilters(task({ dueDate: new Date("2026-10-07") }), filters, now)).toBe(true);
+    expect(matchesFilters(task({ dueDate: new Date("2026-10-13") }), filters, now)).toBe(true);
+    expect(matchesFilters(task({ dueDate: new Date("2026-10-14") }), filters, now)).toBe(false);
+    expect(matchesFilters(task({ dueDate: new Date("2026-10-06") }), filters, now)).toBe(false);
+    expect(matchesFilters(task({ dueDate: null }), filters, now)).toBe(false);
+  });
+  it("combines normalized title search with status and due filters", () => {
+    const filters = { ...NO_FILTERS, status: "OPEN", due: "TODAY", query: "  СЕРВИС  " };
+    expect(matchesFilters(task({ title: "Оплатить сервис", dueDate: new Date("2026-10-07") }), filters, now)).toBe(true);
+    expect(matchesFilters(task({ title: "Другая задача", dueDate: new Date("2026-10-07") }), filters, now)).toBe(false);
+    expect(matchesFilters(task({ title: "Оплатить сервис", status: TaskStatus.DONE, dueDate: new Date("2026-10-07") }), filters, now)).toBe(false);
+  });
+});
