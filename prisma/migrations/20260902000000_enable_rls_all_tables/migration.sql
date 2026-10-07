@@ -26,10 +26,18 @@ ALTER TABLE "public"."Folder"         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."FileObject"     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."Goal"           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."GoalKeyResult"  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "public"."JournalEntry"   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "public"."HealthMetric"   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "public"."HealthLog"      ENABLE ROW LEVEL SECURITY;
+-- IF EXISTS: these three tables are dropped by 20260925123123_drop_journal_health,
+-- which may already be applied on databases that get this migration later.
+ALTER TABLE IF EXISTS "public"."JournalEntry"   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "public"."HealthMetric"   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "public"."HealthLog"      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."WishItem"       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."Budget"         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."Lead"           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."RateLimit"      ENABLE ROW LEVEL SECURITY;
+
+-- Implicit many-to-many join tables and Prisma's own bookkeeping table also
+-- live in `public`, so they are exposed to the Data API unless locked down.
+ALTER TABLE "public"."_NoteToTag"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."_BookmarkToTag"     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."_prisma_migrations" ENABLE ROW LEVEL SECURITY;
