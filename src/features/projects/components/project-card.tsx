@@ -30,7 +30,7 @@ export function ProjectCard({
 }) {
   const deadlineInfo = describeDeadline(new Date(), project.deadline);
   return (
-    <div className="group relative rounded-xl border border-border bg-card p-5 transition-colors hover:border-foreground/20">
+    <div className="group relative rounded-xl border border-border border-t-[3px] border-t-primary bg-card p-5 transition-colors hover:border-foreground/20">
       <Link
         href={`/projects/${project.id}`}
         className="absolute inset-0 rounded-xl"
@@ -44,7 +44,7 @@ export function ProjectCard({
         <div className="relative z-10">
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="rounded-md p-1 text-muted-foreground opacity-0 outline-none transition-opacity hover:bg-accent focus-visible:opacity-100 group-hover:opacity-100"
+              className="rounded-md p-1 text-muted-foreground opacity-100 outline-none transition-opacity hover:bg-accent focus-visible:opacity-100 group-hover:opacity-100"
               aria-label="Действия"
             >
               <MoreHorizontal className="size-4" />
@@ -66,7 +66,7 @@ export function ProjectCard({
         </div>
       </div>
 
-      <h3 className="mt-3 font-medium">{project.name}</h3>
+      <h3 className="mt-3 text-lg font-semibold">{project.name}</h3>
       {project.description && (
         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
           {project.description}

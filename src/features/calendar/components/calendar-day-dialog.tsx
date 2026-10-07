@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { dateLabel, eventTime } from "@/lib/workspace-date";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
@@ -24,10 +25,12 @@ import type { CalendarItem } from "../queries";
 
 export function CalendarDayDialog({
   date,
+  initiallyAdding = false,
   items,
   onOpenChange,
 }: {
   date: Date | null;
+  initiallyAdding?: boolean;
   items: CalendarItem[];
   onOpenChange: (open: boolean) => void;
 }) {
@@ -39,16 +42,17 @@ export function CalendarDayDialog({
   const [note, setNote] = useState("");
 
   useEffect(() => {
-    setAdding(false);
+    setAdding(initiallyAdding);
     setTitle("");
     setTime("09:00");
     setNote("");
-  }, [date]);
+  }, [date, initiallyAdding]);
 
   if (!date) return null;
 
   function submit() {
     start(async () => {
+      try {
       const res = await createCalendarEvent({
         title,
         date: format(date as Date, "yyyy-MM-dd"),
@@ -65,6 +69,7 @@ export function CalendarDayDialog({
       setTime("09:00");
       setNote("");
       router.refresh();
+      } catch { toast.error("Не удалось сохранить событие. Попробуйте ещё раз."); }
     });
   }
 
@@ -81,7 +86,7 @@ export function CalendarDayDialog({
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined} className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="capitalize">
             {format(date, "EEEE, d MMMM", { locale: ru })}
@@ -104,7 +109,7 @@ export function CalendarDayDialog({
                       {item.title}
                     </Link>
                     <span className="text-xs text-muted-foreground">
-                      {CALENDAR_ITEM_LABEL[item.kind]}
+                      {CALENDAR_ITEM_LABEL[item.kind]} · {item.kind === "event" ? eventTime(item.date) : dateLabel(item.date)}
                       {item.meta ? ` · ${item.meta}` : ""}
                     </span>
                   </div>

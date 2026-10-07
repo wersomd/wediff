@@ -28,7 +28,7 @@ export function CalendarDayCell({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex min-h-28 flex-col items-stretch gap-1 bg-card p-2 text-left align-top transition-colors hover:bg-accent/50",
+        "flex min-w-0 min-h-24 sm:min-h-32 flex-col items-stretch gap-1 bg-card p-1 sm:p-2 text-left align-top transition-colors hover:bg-accent/50",
         !inMonth && "bg-card/40 text-muted-foreground/50",
       )}
     >

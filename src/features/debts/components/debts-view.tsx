@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useWorkspaceIntent } from "@/components/shared/use-workspace-intent";
+import { daysFromToday } from "@/lib/workspace-date";
 import { useRouter } from "next/navigation";
-import { differenceInCalendarDays, format } from "date-fns";
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
 import {
@@ -79,6 +81,11 @@ export function DebtsView({
     () => settledCounterparties.reduce((n, c) => n + c.debts.length, 0),
     [settledCounterparties],
   );
+
+  useWorkspaceIntent({ onCreate: () => setCreateOpen(true), onItem: (id) => {
+    const debt = allDebts.find((d) => d.id === id);
+    if (debt) setPayDebt(debt); else toast.error("Долг не найден");
+  } });
 
   function remove(debt: DebtView, counterpartyName: string) {
     if (
@@ -280,7 +287,7 @@ function DebtRow({
   const settled = debt.status === "PAID";
   const dueDate = debt.dueDate;
   const days = dueDate
-    ? differenceInCalendarDays(dueDate, new Date())
+    ? daysFromToday(dueDate)
     : null;
   const overdue = !settled && days !== null && days < 0;
   const progress =
@@ -293,7 +300,7 @@ function DebtRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] uppercase">
+            <Badge variant="outline" className="text-xs">
               {DEBT_DIRECTION_LABELS[debt.direction]}
             </Badge>
             {debt.description && (
@@ -302,7 +309,7 @@ function DebtRow({
               </span>
             )}
           </div>
-          <p className="mt-1 text-base font-semibold tabular-nums">
+          <p className="mt-2 text-xl font-semibold tabular-nums">
             {formatMoney(debt.remaining, debt.currency)}
             {debt.paid > 0 && !settled && (
               <span className="text-xs font-normal text-muted-foreground">

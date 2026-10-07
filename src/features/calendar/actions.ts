@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { localEventTime } from "@/lib/workspace-date";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calendarEventCreateSchema, calendarEventUpdateSchema } from "./schema";
@@ -30,7 +31,7 @@ export async function createCalendarEvent(input: unknown): Promise<ActionResult>
   }
   const { title, date, time, note } = parsed.data;
   await db.calendarEvent.create({
-    data: { title, note: clean(note), startAt: new Date(`${date}T${time}:00`) },
+    data: { title, note: clean(note), startAt: localEventTime(date, time) },
   });
   revalidateCalendar();
   return { ok: true };
@@ -45,7 +46,7 @@ export async function updateCalendarEvent(input: unknown): Promise<ActionResult>
   const { id, title, date, time, note } = parsed.data;
   await db.calendarEvent.update({
     where: { id },
-    data: { title, note: clean(note), startAt: new Date(`${date}T${time}:00`) },
+    data: { title, note: clean(note), startAt: localEventTime(date, time) },
   });
   revalidateCalendar();
   return { ok: true };

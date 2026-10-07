@@ -24,6 +24,8 @@ function clean(value?: string) {
 
 function revalidateSubs() {
   revalidatePath("/subscriptions");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
 }
 
 // Subscription categories are expense categories, upserted by (name, type).

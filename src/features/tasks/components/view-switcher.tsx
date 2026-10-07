@@ -13,7 +13,7 @@ export function ViewSwitcher({
   onChange: (view: TaskView) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-border p-0.5">
+    <div className="inline-flex rounded-lg border border-border bg-card p-1">
       <Tab active={view === "board"} onClick={() => onChange("board")}>
         <KanbanSquare className="size-4" />
         Доска
@@ -39,10 +39,11 @@ function Tab({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
         active
-          ? "bg-secondary text-secondary-foreground"
+          ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

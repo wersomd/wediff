@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useWorkspaceIntent } from "@/components/shared/use-workspace-intent";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -91,6 +92,12 @@ export function FinancesView({
 
   const activeAccounts = accounts.filter((a) => !a.archived);
 
+  useWorkspaceIntent({ onCreate: () => {
+    setTab("overview");
+    if (activeAccounts.length) { setEditingTx(null); setTxDialog(true); }
+    else { setEditingAccount(null); setAccountDialog(true); toast.info("Сначала добавьте счёт для учёта операций"); }
+  } });
+
   const filteredTx = useMemo(
     () =>
       transactions.filter((t) => {
@@ -141,7 +148,7 @@ export function FinancesView({
         description="Счета, баланс и история доходов и расходов."
         action={
           tab === "overview" ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => { setEditingAccount(null); setAccountDialog(true); }}
@@ -170,7 +177,7 @@ export function FinancesView({
       />
 
       {/* Tab bar */}
-      <div className="mb-6 flex gap-1 border-b border-border">
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -211,7 +218,7 @@ export function FinancesView({
                   <div
                     key={a.id}
                     className={cn(
-                      "rounded-lg border border-border bg-card p-4",
+                      "rounded-xl border border-border border-t-[3px] border-t-primary bg-card p-5",
                       a.archived && "opacity-60",
                     )}
                   >
@@ -268,7 +275,7 @@ export function FinancesView({
 
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Транзакции</h2>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Select value={accFilter} onValueChange={setAccFilter}>
                     <SelectTrigger className="h-9 w-[150px]">
                       <SelectValue />

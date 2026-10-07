@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { dateOnly, dayKey } from "@/lib/workspace-date";
 import { toast } from "sonner";
 import { TaskPriority, TaskStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ export function TaskDialog({
   lockedProjectId?: string;
 }) {
   const router = useRouter();
+  const opener = useRef<HTMLElement | null>(null);
   const [pending, start] = useTransition();
   const isEdit = Boolean(task);
 
@@ -72,9 +73,9 @@ export function TaskDialog({
     setDueDate(
       task
         ? task.dueDate
-          ? format(task.dueDate, "yyyy-MM-dd")
+          ? dateOnly(task.dueDate)
           : ""
-        : format(new Date(), "yyyy-MM-dd"),
+        : dayKey(),
     );
     setProjectId(
       lockedProjectId ?? task?.projectId ?? NO_PROJECT,
@@ -85,6 +86,7 @@ export function TaskDialog({
     if (!task) return;
     if (!window.confirm(`Удалить задачу «${task.title}»?`)) return;
     start(async () => {
+      try {
       const res = await deleteTask(task.id);
       if ("error" in res) {
         toast.error(res.error);
@@ -93,11 +95,13 @@ export function TaskDialog({
       toast.success("Задача удалена");
       onOpenChange(false);
       router.refresh();
+      } catch { toast.error("Не удалось удалить задачу. Попробуйте ещё раз."); }
     });
   }
 
   function submit() {
     start(async () => {
+      try {
       const payload = {
         title,
         description,
@@ -116,12 +120,20 @@ export function TaskDialog({
       toast.success(isEdit ? "Задача обновлена" : "Задача создана");
       onOpenChange(false);
       router.refresh();
+      } catch { toast.error("Не удалось сохранить задачу. Попробуйте ещё раз."); }
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="task-detail-panel"
+        onOpenAutoFocus={() => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const target = opener.current?.isConnected && opener.current !== document.body ? opener.current : document.getElementById("workspace-content");
+          target?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? "Редактировать задачу" : "Новая задача"}</DialogTitle>
           <DialogDescription>
@@ -129,7 +141,7 @@ export function TaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 space-y-6 py-6">
           <div className="space-y-2">
             <Label htmlFor="task-title">Название</Label>
             <Input
@@ -137,7 +149,6 @@ export function TaskDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Что нужно сделать?"
-              autoFocus
             />
           </div>
 
@@ -219,7 +230,7 @@ export function TaskDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t border-border pt-5">
           {isEdit && (
             <Button
               variant="ghost"

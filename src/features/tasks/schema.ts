@@ -6,7 +6,7 @@ const dueDate = z
   .string()
   .optional()
   .or(z.literal(""))
-  .transform((v) => (v ? new Date(`${v}T00:00:00`) : null))
+  .transform((v) => (v ? new Date(`${v}T00:00:00.000Z`) : null))
   .refine((d) => d === null || !Number.isNaN(d.getTime()), {
     message: "Некорректная дата",
   });

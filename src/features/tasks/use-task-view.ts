@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   ALL,
   DEFAULT_TASK_SORT,
@@ -23,6 +23,7 @@ const FILTER_KEYS: Record<keyof TaskFiltersState, string> = {
   projectId: "project",
   due: "due",
   created: "created",
+  query: "q",
 };
 
 function readSort(raw: string | null): TaskSort {
@@ -32,7 +33,7 @@ function readSort(raw: string | null): TaskSort {
 }
 
 export function useTaskView() {
-  const router = useRouter();
+
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -48,6 +49,7 @@ export function useTaskView() {
       projectId: params.get(FILTER_KEYS.projectId) ?? ALL,
       due: params.get(FILTER_KEYS.due) ?? ALL,
       created: params.get(FILTER_KEYS.created) ?? ALL,
+      query: params.get("q") ?? "",
     }),
     [params],
   );
@@ -60,9 +62,9 @@ export function useTaskView() {
       const next = new URLSearchParams(params.toString());
       mutate(next);
       const qs = next.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
     },
-    [params, pathname, router],
+    [params, pathname],
   );
 
   const setView = useCallback(
@@ -79,7 +81,7 @@ export function useTaskView() {
       commit((p) => {
         for (const key of Object.keys(FILTER_KEYS) as (keyof TaskFiltersState)[]) {
           const value = nextFilters[key];
-          if (value === ALL) p.delete(FILTER_KEYS[key]);
+          if (!value || value === ALL) p.delete(FILTER_KEYS[key]);
           else p.set(FILTER_KEYS[key], value);
         }
       }),
@@ -106,7 +108,7 @@ export function useTaskView() {
 
   const isFiltered =
     sort !== DEFAULT_TASK_SORT ||
-    Object.values(filters).some((v) => v !== ALL);
+    Object.values(filters).some((v) => Boolean(v) && v !== ALL);
 
   return { view, filters, sort, isFiltered, setView, setFilters, setSort, reset };
 }
