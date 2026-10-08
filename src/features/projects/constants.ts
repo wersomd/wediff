@@ -23,17 +23,17 @@ export const PROJECT_STATUS_ORDER: ProjectStatus[] = [
 // (bg-<color>-500/15 text-<color>-400), applied over Badge's `secondary`
 // variant via tailwind-merge.
 export const PROJECT_STATUS_BADGE_CLASS: Record<ProjectStatus, string> = {
-  PLANNING: "bg-slate-500/15 text-slate-400",
-  IN_PROGRESS: "bg-blue-500/15 text-blue-400",
-  REVIEW: "bg-amber-500/15 text-amber-400",
-  ON_HOLD: "bg-sky-500/15 text-sky-400",
-  DONE: "bg-emerald-500/15 text-emerald-400",
-  ARCHIVED: "bg-neutral-500/15 text-neutral-400",
+  PLANNING: "bg-slate-500/15 text-slate-600 dark:text-slate-300",
+  IN_PROGRESS: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  REVIEW: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  ON_HOLD: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  DONE: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  ARCHIVED: "bg-neutral-500/15 text-neutral-600 dark:text-neutral-300",
 };
 
 export const DEADLINE_TONE_CLASS: Record<DeadlineTone, string> = {
   overdue: "text-destructive",
-  soon: "text-amber-500",
+  soon: "text-amber-700 dark:text-amber-300",
   normal: "text-muted-foreground",
   none: "text-muted-foreground/70",
 };

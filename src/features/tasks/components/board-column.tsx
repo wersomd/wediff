@@ -34,8 +34,7 @@ export function BoardColumn({
   return (
     <div
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-xl border border-t-[3px] bg-muted/60",
-        accent.border,
+        "flex w-[290px] max-w-[85vw] shrink-0 snap-start flex-col rounded-xl bg-muted/45",
       )}
     >
       <div className="flex items-center justify-between px-4 py-4">
@@ -51,7 +50,7 @@ export function BoardColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-32 flex-1 flex-col gap-2 px-2 pb-2 transition-colors duration-150",
+          "flex min-h-48 flex-1 flex-col gap-2 px-2 pb-2 transition-colors duration-150",
           isOver && ["rounded-lg", accent.glow],
         )}
       >

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { setProjectStatus } from "../actions";
-import { describeDeadline, type ProjectProgress } from "../progress";
+import { describeProjectDeadline, type ProjectProgress } from "../progress";
 import {
   DEADLINE_TONE_CLASS,
   DEFAULT_PROJECT_COLOR,
@@ -34,7 +34,7 @@ export function ProjectDetailHeader({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const deadlineInfo = describeDeadline(new Date(), project.deadline);
+  const deadlineInfo = describeProjectDeadline(new Date(), project.deadline, project.status);
 
   function onStatusChange(value: string) {
     start(async () => {

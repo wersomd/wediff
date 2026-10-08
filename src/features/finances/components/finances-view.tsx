@@ -1,5 +1,7 @@
 "use client";
 
+import { UpcomingPayments } from "@/features/payments/components/upcoming-payments";
+import type { PaymentObligation } from "@/features/payments/types";
 import { useMemo, useState, useTransition } from "react";
 import { useWorkspaceIntent } from "@/components/shared/use-workspace-intent";
 import { useRouter } from "next/navigation";
@@ -72,12 +74,14 @@ export function FinancesView({
   categories,
   budgets,
   insights,
+  payments,
 }: {
   accounts: AccountWithBalance[];
   transactions: TransactionRow[];
   categories: CategoryWithCount[];
   budgets: BudgetRow[];
   insights: FinanceInsights;
+  payments: PaymentObligation[];
 }) {
   const router = useRouter();
   const [, start] = useTransition();
@@ -201,6 +205,7 @@ export function FinancesView({
       {tab === "categories" && <CategoriesTab categories={categories} />}
       {tab === "overview" && (
         <>
+          <UpcomingPayments payments={payments} />
           <div className="mb-8">
             <SavingsInsightCard insights={insights} accounts={accounts} />
           </div>

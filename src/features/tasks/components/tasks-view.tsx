@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import { useWorkspaceIntent } from "@/components/shared/use-workspace-intent";
 import { Input } from "@/components/ui/input";
+import { moveVisibleTask } from "../board-state";
 import { ALL } from "../constants";
 import { Button } from "@/components/ui/button";
 import { Board, type Columns } from "./board";
@@ -60,6 +61,8 @@ function TasksViewInner({
     groupByStatus(initialTasks),
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   const [editing, setEditing] = useState<TaskWithProject | null>(null);
 
   useEffect(() => {
@@ -110,7 +113,7 @@ function TasksViewInner({
       const res = await createTask({
         title,
         status,
-        projectId: lockedProjectId ?? "",
+        projectId: lockedProjectId ?? (projects.some(p => p.id === filters.projectId) ? filters.projectId : ""),
       });
       if ("error" in res) {
         toast.error(res.error);
@@ -124,15 +127,18 @@ function TasksViewInner({
   function persistMove(
     taskId: string,
     toStatus: TaskStatus,
-    orderedIds: string[],
+    orderedIds?: string[],
   ) {
+    if (pending) return;
+    const previous = columns;
+    setColumns(moveVisibleTask(columns, taskId, toStatus, orderedIds));
     start(async () => {
       try {
         const res = await moveTask({ taskId, toStatus, orderedIds });
         if ("error" in res) throw new Error(res.error);
         router.refresh();
       } catch {
-        setColumns(groupByStatus(initialTasks));
+        setColumns(previous);
         toast.error("Не удалось переместить задачу. Порядок восстановлен.");
       }
     });
@@ -170,13 +176,13 @@ function TasksViewInner({
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
-        <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3">
+        <div className="flex max-w-full gap-1 overflow-x-auto whitespace-nowrap">
           {[{ label: "Все задачи", due: ALL, status: ALL }, { label: "Открытые", due: ALL, status: "OPEN" }, { label: "Сегодня", due: "TODAY", status: "OPEN" }, { label: "Просрочено", due: "OVERDUE", status: "OPEN" }, { label: "На неделе", due: "WEEK", status: "OPEN" }].map((preset) => <button key={preset.label} className="workspace-tab" aria-pressed={filters.due === preset.due && filters.status === preset.status} onClick={() => setFilters({ ...filters, due: preset.due, status: preset.status })}>{preset.label}</button>)}
         </div>
-        <div className="relative w-full sm:w-56"><Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input aria-label="Поиск задач" placeholder="Найти задачу…" value={filters.query ?? ""} onChange={(e) => setFilters({ ...filters, query: e.target.value })} className="pl-9" /></div>
+        <div className="flex w-full items-center gap-2 sm:w-auto"><div className="relative min-w-0 flex-1 sm:w-56"><Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input aria-label="Поиск задач" placeholder="Найти задачу…" value={filters.query ?? ""} onChange={(e) => setFilters({ ...filters, query: e.target.value })} className="pl-9" /></div><Button variant="outline" aria-expanded={filtersOpen} aria-controls="task-filters" onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal className="size-4" />Фильтры{isFiltered && <span className="size-1.5 rounded-full bg-primary" />}</Button></div>
       </div>
-      <TaskFilters
+      {filtersOpen && <div id="task-filters" className="rounded-lg border border-border bg-card p-3"><TaskFilters
         filters={filters}
         onChange={setFilters}
         sort={sort}
@@ -185,14 +191,18 @@ function TasksViewInner({
         isFiltered={isFiltered}
         projects={projects}
         showProject={!lockedProjectId}
-      />
+      /></div>}
 
-      {view === "board" && dndDisabled && <p className="rounded-lg bg-primary/5 px-4 py-3 text-xs text-muted-foreground">Чтобы менять порядок перетаскиванием, сбросьте фильтры и выберите сортировку «Вручную». Статус можно изменить в карточке задачи.</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>{(view === "board" && !showCancelled && filters.status !== "CANCELLED" ? listTasks.filter(t => t.status !== "CANCELLED") : listTasks).length} задач{isFiltered && <button type="button" className="ml-3 text-primary hover:underline" onClick={reset}>Сбросить фильтры</button>}</span>
+        {view === "board" && <button type="button" className="workspace-tab" aria-pressed={showCancelled} onClick={() => setShowCancelled(!showCancelled)}>{showCancelled ? "Скрыть отменённые" : `Отменённые (${columns.CANCELLED.length})`}</button>}
+      </div>
       {view === "board" ? (
         <Board
           columns={boardColumns}
-          dndDisabled={dndDisabled || pending}
-          onColumnsChange={setColumns}
+          dndDisabled={pending}
+          reorderDisabled={dndDisabled}
+          showCancelled={showCancelled || filters.status === "CANCELLED"}
           onMoveEnd={persistMove}
           onAddTask={addTask}
           onCardClick={onCardClick}

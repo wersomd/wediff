@@ -24,6 +24,7 @@ function clean(value?: string) {
 
 function revalidateSubs() {
   revalidatePath("/subscriptions");
+  revalidatePath("/finances");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
 }

@@ -10,6 +10,7 @@ import {
   type TaskFiltersState,
   type TaskSort,
 } from "./constants";
+import { resolveTaskView } from "./board-state";
 import type { TaskView } from "./components/view-switcher";
 
 // Filter/sort/view state lives in the URL query string (like Jira/Notion): the
@@ -37,10 +38,7 @@ export function useTaskView() {
   const pathname = usePathname();
   const params = useSearchParams();
 
-  // List is the default workspace (DEFAULT_TASK_VIEW); only "board" is tracked
-  // in the URL.
-  const view: TaskView =
-    params.get("view") === "board" ? "board" : DEFAULT_TASK_VIEW;
+  const view: TaskView = resolveTaskView(params.get("view"));
 
   const filters: TaskFiltersState = useMemo(
     () => ({

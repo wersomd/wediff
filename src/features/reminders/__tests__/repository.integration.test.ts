@@ -1,0 +1,28 @@
+import { afterAll, expect, it, vi } from "vitest";
+import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+const integrationUrl = process.env.REMINDER_INTEGRATION_DATABASE_URL;
+const db = new PrismaClient(integrationUrl ? { datasourceUrl: integrationUrl } : undefined);
+vi.mock("@/lib/db", () => ({ get db() { return db; } }));
+const day = `qa-${randomUUID()}`;
+afterAll(async () => { if (integrationUrl) await db.reminderDelivery.deleteMany({ where: { day } }); await db.$disconnect(); });
+it.skipIf(!integrationUrl)("PostgreSQL snapshot lock, CAS claims, attempts and stale leases", async () => {
+ const { deliveryRepository } = await import("../repository");
+ const now = new Date();
+ await Promise.all([deliveryRepository.prepare(day, ["first", "second"]), deliveryRepository.prepare(day, ["other"])]);
+ const snapshot = await db.reminderDelivery.findMany({ where: { day }, orderBy: { part: "asc" } });
+ expect([1, 2]).toContain(snapshot.length);
+ expect(snapshot.map(r => r.payload)).toEqual(snapshot.length === 2 ? ["first", "second"] : ["other"]);
+ const claims = await Promise.all([deliveryRepository.claim(day, now), deliveryRepository.claim(day, now)]);
+ const ids = claims.filter(Boolean).map(r => r!.id);
+ expect(new Set(ids).size).toBe(ids.length);
+ const first = ids[0];
+ expect(first).toBeTruthy();
+ await deliveryRepository.finish(first, { status: "sent" }, now);
+ expect((await db.reminderDelivery.findUniqueOrThrow({ where: { id: first } })).status).toBe("sent");
+ await db.reminderDelivery.updateMany({ where: { day, status: { not: "sent" } }, data: { status: "sending", leaseUntil: new Date(now.getTime() - 1000) } });
+ expect(await deliveryRepository.claim(day, now)).toBeNull();
+ expect(await db.reminderDelivery.count({ where: { day, status: "sending" } })).toBe(0);
+ await db.reminderDelivery.update({ where: { id: first }, data: { status: "failed", attempts: 3 } });
+ expect(await deliveryRepository.claim(day, now)).toBeNull();
+});

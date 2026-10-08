@@ -51,7 +51,7 @@ export function TaskFilters({
         value={sort}
         onValueChange={(v) => onSortChange(v as TaskSort)}
       >
-        <SelectTrigger className="h-9 w-[170px]">
+        <SelectTrigger aria-label="Сортировка задач" className="h-9 w-[170px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -67,7 +67,7 @@ export function TaskFilters({
         value={filters.status}
         onValueChange={(v) => onChange({ ...filters, status: v })}
       >
-        <SelectTrigger className="h-9 w-[150px]">
+        <SelectTrigger aria-label="Статус задачи" className="h-9 w-[150px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -85,7 +85,7 @@ export function TaskFilters({
         value={filters.priority}
         onValueChange={(v) => onChange({ ...filters, priority: v })}
       >
-        <SelectTrigger className="h-9 w-[150px]">
+        <SelectTrigger aria-label="Приоритет задачи" className="h-9 w-[150px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -103,7 +103,7 @@ export function TaskFilters({
           value={filters.projectId}
           onValueChange={(v) => onChange({ ...filters, projectId: v })}
         >
-          <SelectTrigger className="h-9 w-[160px]">
+          <SelectTrigger aria-label="Проект задачи" className="h-9 w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -121,7 +121,7 @@ export function TaskFilters({
         value={filters.due}
         onValueChange={(v) => onChange({ ...filters, due: v })}
       >
-        <SelectTrigger className="h-9 w-[160px]">
+        <SelectTrigger aria-label="Срок задачи" className="h-9 w-[160px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -138,7 +138,7 @@ export function TaskFilters({
         value={filters.created}
         onValueChange={(v) => onChange({ ...filters, created: v })}
       >
-        <SelectTrigger className="h-9 w-[160px]">
+        <SelectTrigger aria-label="Дата создания" className="h-9 w-[160px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

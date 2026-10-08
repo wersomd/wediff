@@ -45,7 +45,8 @@ const collisionDetection: CollisionDetection = (args) => {
 export function Board({
   columns,
   dndDisabled = false,
-  onColumnsChange,
+  reorderDisabled = false,
+  showCancelled = false,
   onMoveEnd,
   onAddTask,
   onCardClick,
@@ -53,11 +54,12 @@ export function Board({
   columns: Columns;
   // True while a sort or filter is active — cards render but can't be dragged.
   dndDisabled?: boolean;
-  onColumnsChange: (next: Columns) => void;
+  reorderDisabled?: boolean;
+  showCancelled?: boolean;
   onMoveEnd: (
     taskId: string,
     toStatus: TaskStatus,
-    orderedIds: string[],
+    orderedIds?: string[],
   ) => void;
   onAddTask: (title: string, status: TaskStatus) => void;
   onCardClick: (task: TaskWithProject) => void;
@@ -106,6 +108,7 @@ export function Board({
     const sourceCol = columnOf(activeId);
     const targetCol = columnOf(overId);
     if (!sourceCol || !targetCol) return;
+    if (reorderDisabled && sourceCol === targetCol) return;
 
     const moved = columns[sourceCol].find((t) => t.id === activeId);
     if (!moved) return;
@@ -124,9 +127,6 @@ export function Board({
       ...targetBase.slice(index),
     ];
 
-    const next: Columns = { ...columns };
-    next[sourceCol] = sourceItems;
-    next[targetCol] = targetItems;
 
     // No-op guard: same column, same position.
     if (
@@ -136,8 +136,7 @@ export function Board({
       return;
     }
 
-    onColumnsChange(next);
-    onMoveEnd(activeId, targetCol, targetItems.map((t) => t.id));
+    onMoveEnd(activeId, targetCol, reorderDisabled ? undefined : targetItems.map((t) => t.id));
   }
 
   return (
@@ -149,8 +148,8 @@ export function Board({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTask(null)}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {TASK_STATUS_ORDER.map((status) => (
+      <div className="flex items-stretch gap-3 overflow-x-auto pb-4 snap-x snap-proximity">
+        {TASK_STATUS_ORDER.filter(s => showCancelled || s !== "CANCELLED").map((status) => (
           <BoardColumn
             key={status}
             status={status}
