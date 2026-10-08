@@ -34,7 +34,7 @@ export const moveTaskSchema = z.object({
   taskId: z.string().min(1),
   toStatus: z.nativeEnum(TaskStatus),
   // The target column's task ids in their new order, including taskId.
-  orderedIds: z.array(z.string().min(1)).min(1),
+  orderedIds: z.array(z.string().min(1)).min(1).optional(),
 });
 
 export type TaskCreateInput = z.input<typeof taskCreateSchema>;

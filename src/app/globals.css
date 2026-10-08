@@ -49,26 +49,26 @@
 }
 
 .dark {
-  --background: oklch(0.16 0.008 264);
-  --foreground: oklch(0.96 0.004 264);
-  --card: oklch(0.19 0.01 264);
-  --card-foreground: oklch(0.96 0.004 264);
-  --popover: oklch(0.21 0.012 264);
+  --background: #191B20;
+  --foreground: #ECEEF2;
+  --card: #22252B;
+  --card-foreground: #ECEEF2;
+  --popover: #2B2F37;
   --popover-foreground: oklch(0.96 0.004 264);
-  --primary: oklch(0.62 0.2 264);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.24 0.012 264);
+  --primary: #8BA6FF;
+  --primary-foreground: #17213C;
+  --secondary: #2B2F37;
   --secondary-foreground: oklch(0.96 0.004 264);
-  --muted: oklch(0.23 0.01 264);
-  --muted-foreground: oklch(0.68 0.018 264);
-  --accent: oklch(0.29 0.04 264);
+  --muted: #2B2F37;
+  --muted-foreground: #A5ADBB;
+  --accent: #343C50;
   --accent-foreground: oklch(0.96 0.004 264);
   --destructive: oklch(0.69 0.14 28);
   --destructive-foreground: oklch(0.16 0.02 264);
   --success: oklch(0.74 0.13 155);
-  --border: oklch(0.32 0.012 264);
-  --input: oklch(0.3 0.012 264);
-  --ring: oklch(0.62 0.2 264);
+  --border: #3C424D;
+  --input: #454D5B;
+  --ring: #8BA6FF;
 
   --brand-frame: oklch(0.32 0.012 264);
   --brand-node: oklch(0.78 0.16 264);
@@ -145,7 +145,10 @@
 
 /* Workspace chrome: a confident blue spine and quiet, legible work surfaces. */
 .workspace-sidebar { background: #174BEB; }
-.dark .workspace-sidebar { background: #1539A5; }
+.dark .workspace-sidebar { background: #22252B; border-right: 1px solid #3C424D; }
+.dark .workspace-nav-link { color: #B9C0CE; }
+.dark .workspace-nav-link:hover { background: #2B2F37; color: #ECEEF2; }
+.dark .workspace-nav-link[aria-current="page"] { background: #343C50; color: #B8C8FF; }
 .workspace-nav-link { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: rgb(255 255 255 / 88%); }
 .workspace-nav-link:hover { background: rgb(255 255 255 / 12%); color: white; }
 .workspace-nav-link.is-active { background: white; color: #174BEB; box-shadow: 0 3px 10px rgb(0 20 90 / 12%); }

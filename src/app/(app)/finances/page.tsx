@@ -1,3 +1,4 @@
+import { getPaymentObligations } from "@/features/payments/queries";
 import type { Metadata } from "next";
 import { FinancesView } from "@/features/finances/components/finances-view";
 import {
@@ -11,16 +12,18 @@ import {
 export const metadata: Metadata = { title: "Финансы" };
 
 export default async function FinancesPage() {
-  const [accounts, transactions, categories, budgets, insights] = await Promise.all([
+  const [accounts, transactions, categories, budgets, insights, payments] = await Promise.all([
     getAccountsWithBalance(),
     getTransactions(),
     getCategoriesWithCount(),
     getBudgetsWithSpend(),
     getFinanceInsights(),
+    getPaymentObligations(),
   ]);
 
   return (
     <FinancesView
+      payments={payments}
       accounts={accounts}
       transactions={transactions}
       categories={categories}

@@ -1,4 +1,5 @@
 import "server-only";
+import { daysFromToday } from "@/lib/workspace-date";
 import { ProjectStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { computeProjectProgress, rankProjectUrgency } from "./progress";
@@ -9,11 +10,12 @@ import { computeProjectProgress, rankProjectUrgency } from "./progress";
 export async function getProjects() {
   const projects = await db.project.findMany({
     orderBy: { createdAt: "desc" },
-    include: { tasks: { select: { status: true } } },
+    include: { tasks: { select: { status: true, dueDate: true } } },
   });
   return projects.map(({ tasks, ...project }) => ({
     ...project,
     taskCount: tasks.length,
+    overdueTaskCount: ["DONE", "ARCHIVED"].includes(project.status) ? 0 : tasks.filter(t => !["DONE", "CANCELLED"].includes(t.status) && t.dueDate && daysFromToday(t.dueDate) < 0).length,
     progress: computeProjectProgress(tasks),
   }));
 }

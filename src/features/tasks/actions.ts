@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { mergeTaskOrder } from "./board-state";
 import { TaskStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -134,29 +135,24 @@ export async function moveTask(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return { error: "Некорректное перемещение" };
   const { taskId, toStatus, orderedIds } = parsed.data;
 
-  const moved = await db.task.findUnique({
-    where: { id: taskId },
-    select: { completedAt: true },
-  });
-  if (!moved) return { error: "Задача не найдена" };
-
-  await db.$transaction([
-    // Rewrite order for every card in the target column.
-    ...orderedIds.map((id, index) =>
-      db.task.update({ where: { id }, data: { order: index } }),
-    ),
-    // Set the moved card's status + completedAt.
-    db.task.update({
-      where: { id: taskId },
-      data: {
+  try {
+    await db.$transaction(async (tx) => {
+      const moved = await tx.task.findUnique({ where: { id: taskId } });
+      if (!moved) throw new Error("Задача не найдена");
+      const target = await tx.task.findMany({ where: { status: toStatus }, orderBy: [{ order: "asc" }, { id: "asc" }], select: { id: true } });
+      const all = target.map(t => t.id);
+      if (!all.includes(taskId)) all.push(taskId);
+      if (orderedIds && !orderedIds.includes(taskId)) throw new Error("Некорректный порядок");
+      const ids = orderedIds ? mergeTaskOrder(all, orderedIds) : [...all.filter(id => id !== taskId), taskId];
+      for (const [order, id] of ids.entries()) await tx.task.update({ where: { id }, data: { order } });
+      await tx.task.update({ where: { id: taskId }, data: {
         status: toStatus,
-        completedAt:
-          toStatus === TaskStatus.DONE
-            ? (moved.completedAt ?? new Date())
-            : null,
-      },
-    }),
-  ]);
+        completedAt: toStatus === TaskStatus.DONE ? (moved.completedAt ?? new Date()) : null,
+      } });
+    }, { isolationLevel: "Serializable" });
+  } catch {
+    return { error: "Не удалось переместить задачу. Обновите доску и попробуйте ещё раз." };
+  }
   revalidateTaskViews();
   return { ok: true };
 }

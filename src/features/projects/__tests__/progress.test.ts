@@ -128,3 +128,11 @@ describe("rankProjectUrgency", () => {
     ]);
   });
 });
+
+import { describeProjectDeadline } from "../progress";
+it("uses Almaty day and suppresses closed-project warnings", () => {
+ const now = new Date("2026-10-08T19:01:00Z");
+ expect(describeProjectDeadline(now, new Date("2026-10-08T00:00:00Z"), "IN_PROGRESS").tone).toBe("overdue");
+ expect(describeProjectDeadline(now, new Date("2026-10-08T00:00:00Z"), "DONE").tone).toBe("normal");
+ expect(describeProjectDeadline(now, new Date("2026-10-08T00:00:00Z"), "ARCHIVED").tone).toBe("normal");
+});

@@ -2,7 +2,7 @@ import { TaskStatus, TaskPriority } from "@prisma/client";
 
 export const OPEN_TASK_STATUSES: TaskStatus[] = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.ON_HOLD];
 
-export const DEFAULT_TASK_VIEW = "list";
+export const DEFAULT_TASK_VIEW = "board";
 
 // Board columns, left to right.
 export const TASK_STATUS_ORDER: TaskStatus[] = [
@@ -17,8 +17,8 @@ export const TASK_STATUS_ORDER: TaskStatus[] = [
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "План",
   IN_PROGRESS: "В работе",
-  REVIEW: "Ревью",
-  ON_HOLD: "На стопе",
+  REVIEW: "На проверке",
+  ON_HOLD: "На паузе",
   DONE: "Завершено",
   CANCELLED: "Отменено",
 };

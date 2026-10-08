@@ -1,3 +1,6 @@
+import { ReminderSettings } from "@/features/reminders/components/reminder-settings";
+import { getReminderSettings, getReminderStatus } from "@/features/reminders/settings";
+import { DEFAULT_REMINDER_SETTINGS } from "@/features/reminders/schema";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -18,6 +21,8 @@ export default async function SettingsPage() {
     ? await db.user.findUnique({ where: { id: session.user.id } })
     : null;
 
+  const [reminders, reminderStatus] = await Promise.all([getReminderSettings().catch(() => null), getReminderStatus()]);
+
   return (
     <>
       <PageHeader title="Настройки" description="Аккаунт, безопасность и настройки приложения." />
@@ -35,6 +40,7 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
+        <ReminderSettings initial={reminders ?? { ...DEFAULT_REMINDER_SETTINGS, enabled: false }} status={reminderStatus} invalid={reminders === null} />
         <TwoFactorCard enabled={user?.twoFactorEnabled ?? false} />
       </div>
     </>

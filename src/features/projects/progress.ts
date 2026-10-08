@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, format } from "date-fns";
+import { format } from "date-fns";
+import { daysFromToday } from "@/lib/workspace-date";
 import { ru } from "date-fns/locale";
 
 export type TaskStatusLike =
@@ -42,7 +43,7 @@ export interface DeadlineInfo {
 // matching existing dashboard widgets (e.g. subscriptions' "N дн.").
 export function describeDeadline(now: Date, deadline: Date | null): DeadlineInfo {
   if (!deadline) return { tone: "none", label: "Без дедлайна" };
-  const days = differenceInCalendarDays(deadline, now);
+  const days = daysFromToday(deadline, now);
   if (days < 0) return { tone: "overdue", label: `Просрочен на ${Math.abs(days)} дн.` };
   if (days === 0) return { tone: "soon", label: "Сегодня дедлайн" };
   if (days <= 3) return { tone: "soon", label: `Осталось ${days} дн.` };
@@ -60,8 +61,8 @@ export interface RankableProject {
 }
 
 function compareUrgency(a: RankableProject, b: RankableProject, now: Date): number {
-  const aDays = a.deadline ? differenceInCalendarDays(a.deadline, now) : null;
-  const bDays = b.deadline ? differenceInCalendarDays(b.deadline, now) : null;
+  const aDays = a.deadline ? daysFromToday(a.deadline, now) : null;
+  const bDays = b.deadline ? daysFromToday(b.deadline, now) : null;
 
   if (aDays !== null && bDays !== null && aDays !== bDays) return aDays - bDays;
   if (aDays !== null && bDays === null) return -1;
@@ -85,4 +86,9 @@ export function rankProjectUrgency<T extends RankableProject>(now: Date, project
   }
   active.sort((a, b) => compareUrgency(a, b, now));
   return [...active, ...terminal];
+}
+
+export function describeProjectDeadline(now: Date, deadline: Date | null, status: ProjectStatusLike): DeadlineInfo {
+  if (status === "DONE" || status === "ARCHIVED") return { tone: "normal", label: status === "DONE" ? "Завершён" : "В архиве" };
+  return describeDeadline(now, deadline);
 }
